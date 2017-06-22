@@ -1,0 +1,91 @@
+---
+title: "initialAnalysis"
+author: "Pooja Bhat"
+date: "June 13, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## this is the initial look at the zebrafish quantSeq data
+## just analysis based on the experssion to look at correlation between replicates + clustering and PCA analysis.
+
+```{r readinInDataAndColumnFiles}
+sampleInfoPath = read.delim("/Volumes/groups//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/dataDescription.txt",header = F)
+library(DESeq2)
+
+filePaths = file.path("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/counts/",sampleInfoPath$V1)
+
+data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
+
+
+onlyCounts = lapply(data_counts,function(x) x$ReadsCPM)
+onlyCounts = do.call(cbind,onlyCounts)
+library(GGally)
+
+colnames(onlyCounts) = sampleInfoPath$V4
+onlyCounts = onlyCounts[-which(apply(onlyCounts,1,max)<5),]
+onlyCounts_cor = cor(onlyCounts)
+pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/plots/initialAnalysis/correlationPlots.pdf")
+corrplot::corrplot((onlyCounts_cor),type = "lower")
+dev.off()
+
+library(fpc)
+library(ggplot2)
+kclust=kmeans(t(onlyCounts),centers=6)
+kclust$cluster <- as.factor(kclust$cluster)
+d=dist(t(onlyCounts), method = "euclidean") 
+fit=cmdscale(d,eig=TRUE, k=6) # k is the number of dim
+
+
+clus= (kmeans(x = t(onlyCounts),centers = 6))
+
+pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/plots/initialAnalysis/PCS.pdf")
+p = ggplot(data.frame(t(onlyCounts)), aes(fit$points[,1], fit$points[,2], color =  factor(kclust$cluster),label=rownames(fit$points))) + xlab("PC1") + ylab("PC2")
+p <- p + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
+p <- p + theme(axis.title.x = element_text(size = rel(1.5), angle = 00))
+p= p + theme(axis.text=element_text(size=16,angle=90),axis.title=element_text(size=20,face="bold")) + geom_point(size=4)
+p= p + theme(legend.text = element_text(size = 14, colour = "black"))
+p= p + theme(legend.title = element_text(size = 18, colour = "black"))
+p= p  + theme(legend.key.size = unit(1.5,"cm"))+geom_label(aes(fit$points[,1],fit$points[,2],rownames(fit$points))) 
+p
+dev.off()
+
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r slamSeq, echo=FALSE}
+sampleInfoPath = read.delim("/Volumes/groups//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/dataDescription.txt",header = F)
+sampleInfoPath = sampleInfoPath[1:13,]
+library(DESeq2)
+
+filePaths = file.path("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/counts/",sampleInfoPath$V1)
+
+data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
+tCounts = lapply(data_counts,function(x) x$ConversionRate)
+tCounts = do.call(cbind,tCounts)
+cpm = lapply(data_counts,function(x) x$ReadsCPM)
+cpm = do.call(cbind,cpm)
+greaterThan5 = which(apply(cpm,1,max)>5)
+tCounts = tCounts[greaterThan5,]
+colnames(tCounts) = sampleInfoPath$V4
+tCounts_injection = tCounts[,grep("injection",colnames(tCounts))]
+
+library(cluster)
+a = (pam(tCounts_injection,k=3))
+
+
+
+
+
+
+
+```
+
+
