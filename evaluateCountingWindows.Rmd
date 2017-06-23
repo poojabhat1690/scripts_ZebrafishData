@@ -9,6 +9,13 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+
+```{r loading libraries}
+library(reshape)
+library(ggplot2)
+```
+
 ### this is a script that evaluates the counting windows created for the zebrafish annotation. 
 
 ```{r reading in the counting windows}
@@ -17,14 +24,43 @@ countingWindows_zebrafish = read.table("/Volumes/clustertmp/bioinfo/pooja/SLAMan
 countingWindows_zebrafish$V4[1]
 countingWindows_zebrafish = countingWindows_zebrafish[-which(countingWindows_zebrafish$V4 == ""),]
 
+countingWindows_numberOfGenes = as.data.frame(table(countingWindows_zebrafish$V4))
+
+
+pdf("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/numberOfoCountingWindowsPerGene.pdf")
+ggplot(countingWindows_numberOfGenes,aes(x=Freq)) + geom_bar() + theme_bw() + xlab("number of counting windows") + ylab("Number of genes")+ geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle(paste0("For all counting windows (#CountingWindows",nrow(countingWindows_zebrafish),",","#Genes=",nrow(countingWindows_numberOfGenes),")"))+scale_x_discrete(limits=c(1:10))
+
+countingWindowsGreaterThan5cpm = read.delim("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/countingWindowsGreaterThan5cpm.bed",sep="\t",stringsAsFactors = F) 
+countingWindowsGreaterThan5cpm$Name[1]
+countingWindowsGreaterThan5cpm = countingWindowsGreaterThan5cpm[-which(countingWindowsGreaterThan5cpm$Name == ""),]
+
+countingWindowsGreaterThan5cpm_genes = as.data.frame(table(countingWindowsGreaterThan5cpm$Name))
+
+ggplot(countingWindowsGreaterThan5cpm_genes,aes(x=Freq)) + geom_bar() + theme_bw() + xlab("number of counting windows") + ylab("Number of genes")+ geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle(paste0("greater than 5cpm (#CountingWindows=",nrow(countingWindowsGreaterThan5cpm),",","#Genes=",nrow(countingWindowsGreaterThan5cpm_genes),")"))+scale_x_discrete(limits=c(1:max(countingWindowsGreaterThan5cpm_genes$Freq)))
+
+## also reading in ensembl annotations 
+
+ensembl_proteinCoding = read.delim("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/dr10/ensembl_dr10_Ensembl_Genes_88/proteinCoding_annotatedUTRs.bed",stringsAsFactors = F,sep="\t",header=F)
+
+ensembl_proteinCoding = ensembl_proteinCoding[-which(ensembl_proteinCoding$V4 ==""),]
+ensembl_proteinCoding_genes = as.data.frame(table(ensembl_proteinCoding$V4))
+ggplot(ensembl_proteinCoding_genes,aes(x=Freq)) + geom_bar() + theme_bw() + xlab("number of counting windows") + ylab("Number of genes")+ geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle(paste0("ensembl proteinCoding (#transcripts=",nrow(ensembl_proteinCoding),",","#Genes=",nrow(ensembl_proteinCoding_genes),")"))+scale_x_discrete(limits=c(1:max(ensembl_proteinCoding_genes$Freq)))
+## refSeq
+refSeq_proteinCoding = read.delim("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/dr10/refSeq_dr10_GRCh38_20170504/processed/refSeq_mrna_utrsPresent.bed",stringsAsFactors = F,sep="\t",header=F)
+
+
+refSeq_proteinCoding_genes = as.data.frame(table(refSeq_proteinCoding$V4))
+ggplot(refSeq_proteinCoding_genes,aes(x=Freq)) + geom_bar() + theme_bw() + xlab("number of counting windows") + ylab("Number of genes")+ geom_text(stat='count',aes(label=..count..),vjust=-1) + ggtitle(paste0("refSeq proteinCoding (#transcripts=",nrow(refSeq_proteinCoding),",","#Genes=",nrow(refSeq_proteinCoding_genes),")"))+scale_x_discrete(limits=c(1:max(refSeq_proteinCoding_genes$Freq)))
+
+refSeq_proteinCoding_genes$category = "refSeq ProteinCoding"
+ensembl_proteinCoding_genes$category = "ensembl ProteinCoding"
+countingWindows_numberOfGenes$category = "allCountignWindows"
+countingWindowsGreaterThan5cpm_genes$category = "CountingWindows_5cpm"
+
+allCategories = rbind.data.frame(refSeq_proteinCoding_genes,ensembl_proteinCoding_genes,countingWindowsGreaterThan5cpm_genes,countingWindows_numberOfGenes)
+ggplot(allCategories,aes(Freq,group=category,col=category)) + geom_density() + scale_x_discrete(limits = c(1:10)) + xlim(c(1,10))
+
+
+dev.off()
+
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

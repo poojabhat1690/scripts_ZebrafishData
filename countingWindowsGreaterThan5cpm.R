@@ -18,6 +18,6 @@ colnames(onlyCounts) = c(colnames(metaData),as.character(sampleInfoPath$V4))
 onlyCounts = onlyCounts[-which(apply(onlyCounts[,c(7:ncol(onlyCounts))],1,max)<5),]
 
 
-colnames(onlyCounts) = c("chr","start","end","geneName","score","strand")
+
 write.table(onlyCounts,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/countingWindowsGreaterThan5cpm.bed",sep="\t",row.names = F,quote = F)
 
