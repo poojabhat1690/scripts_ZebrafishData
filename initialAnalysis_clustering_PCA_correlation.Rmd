@@ -12,10 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ## just analysis based on the experssion to look at correlation between replicates + clustering and PCA analysis.
 
 ```{r readinInDataAndColumnFiles}
-sampleInfoPath = read.delim("/Volumes/groups//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/dataDescription.txt",header = F)
+sampleInfoPath = read.delim("/Volumes/groups-1///ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/dataDescription.txt",header = F)
 library(DESeq2)
 
-filePaths = file.path("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/counts/",sampleInfoPath$V1)
+filePaths = file.path("/Volumes/groups-1//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/counts/",sampleInfoPath$V1)
 
 data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
 
@@ -55,37 +55,4 @@ dev.off()
 
 
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r slamSeq, echo=FALSE}
-sampleInfoPath = read.delim("/Volumes/groups//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/dataDescription.txt",header = F)
-sampleInfoPath = sampleInfoPath[1:13,]
-library(DESeq2)
-
-filePaths = file.path("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/counts/",sampleInfoPath$V1)
-
-data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
-tCounts = lapply(data_counts,function(x) x$ConversionRate)
-tCounts = do.call(cbind,tCounts)
-cpm = lapply(data_counts,function(x) x$ReadsCPM)
-cpm = do.call(cbind,cpm)
-greaterThan5 = which(apply(cpm,1,max)>5)
-tCounts = tCounts[greaterThan5,]
-colnames(tCounts) = sampleInfoPath$V4
-tCounts_injection = tCounts[,grep("injection",colnames(tCounts))]
-
-library(cluster)
-a = (pam(tCounts_injection,k=3))
-
-
-
-
-
-
-
-```
-
 

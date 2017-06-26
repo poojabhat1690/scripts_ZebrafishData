@@ -1,3 +1,4 @@
+
 #!/bin/bash
 # -pe smp 6-24
 
@@ -6,4 +7,4 @@
 ml subread
 
 
-featureCounts -B -s 1 -a /groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10/GTFfiles/Danio_rerio.GRCz10.89.gtf -o /groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/rnaSeqReads_featureCounts.txt /clustertmp/pooja/STARmapping/allMapped/*.bam
+featureCounts -T 15 -B  -p -g gene_id -a  /groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10/GTFfiles/Danio_rerio.GRCz10.89.gtf -o /groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/rnaSeqReads_featureCounts_strandSpecific_allGenes.txt /clustertmp/pooja/STARmapping/allMapped/*.bam
