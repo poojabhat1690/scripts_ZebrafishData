@@ -64,3 +64,26 @@ ggplot(allCategories,aes(Freq,group=category,col=category)) + geom_density() + s
 dev.off()
 
 ```
+
+
+
+```{r pie charts of ensembl and refSeq annotations}
+### this script evaluates existing UTR annotations of zebrafish
+
+ensemblAnnotation = read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10/ensembl_dr10_Ensembl_Genes_88/proteinCoding_annotatedUTRs.bed",header=F)
+ensembl_noAnnotation = read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10/ensembl_dr10_Ensembl_Genes_88/proteinCoding_UnannotatedUTRs.bed",header=F)
+labels_pie = paste(c("annotated","Non-annotated"),c(nrow(ensemblAnnotation),nrow(ensembl_noAnnotation)))
+
+pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/scripts_ZebrafishData/")
+pie(x = c(nrow(ensemblAnnotation),nrow(ensembl_noAnnotation)),labels = labels_pie)
+
+refSeqAnnotation =read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10/refSeq_dr10_GRCh38_20170504/processed/refSeq_mrna_utrsPresent.bed",header = F)
+refSeq_transcripts = read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10/refSeq_dr10_GRCh38_20170504/refFlat.txt",header=T)
+
+
+
+
+
+```
+
+
