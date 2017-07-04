@@ -51,3 +51,15 @@ allAnnotations_minus_ranges_reduced = lapply(negative_ranges,function(x) unlist(
 
 allAnnotations_minus_ranges_reduced_df = lapply(allAnnotations_minus_ranges_reduced,function(x) reducedToDf(x))
 allAnnotations_minus_ranges_reduced_df = do.call(rbind,allAnnotations_minus_ranges_reduced_df)
+
+
+
+## all annotations_merged 
+
+countingWindows = rbind(allAnnotations_plus_ranges_reduced_df,allAnnotations_minus_ranges_reduced_df)
+countingWindows$starts = countingWindows$starts -1
+write.table(countingWindows, "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/analysis_ensemblAnnotation/countingWindoes_ensemblAnnotation.bed",sep="\t",quote = F)
+
+
+#### now creating the counting windows for multimapping reassignment
+
