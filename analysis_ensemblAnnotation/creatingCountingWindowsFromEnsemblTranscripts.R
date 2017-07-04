@@ -64,4 +64,4 @@ write.table(countingWindows, "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnn
 
 #### now creating the counting windows for multimapping reassignment
 
-chromosomes_mm = paste0("chr",c("2L","2R","3L","3R","4","X","Y"))
+
