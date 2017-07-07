@@ -20,7 +20,10 @@ data_counts_control = data_counts[grep("control",names(data_counts))]
 
 RPM_injection = do.call(cbind,lapply(data_counts_injection,function(x) x$ReadsCPM))
 tcConversions_injection = do.call(cbind,lapply(data_counts_injection,function(x) x$ConversionRate))
-
+tcConversions_control = do.call(cbind,lapply(data_counts_control,function(x) x$ConversionRate))
+tcConversions_control = tcConversions_control[,c(1:6)]
+tcConversions_injection  = tcConversions_injection - tcConversions_control
+tcConversions_injection[which(tcConversions_injection<0)]<-0
 ##### creating summarized experiments of both these :
 
 
@@ -50,7 +53,15 @@ data_counts_injection_tcConversions = data_counts_injection_tcConversions[index_
 
 max_gene = apply(assay(data_counts_injection_readsCPM),1,max)
 assay(data_counts_injection_readsCPM) = assay(data_counts_injection_readsCPM)/max_gene
-nclus = 3
+### elbow mehtod to determine the number of clusters
+
+
+#### by looking at the plot we can see there are ~ 6 clusters that define the data
+
+nclus = 6
+
+
+set.seed(123)
 clusterRPMs = kmeans(assay(data_counts_injection_readsCPM),centers = nclus)
 names_clus = paste0("clus",c(1:nclus))
 diff_clusters= vector("list",nclus)
@@ -63,9 +74,21 @@ plot_clusters_tc = vector("list",nclus)
 totalPlot = c()
 
 pdf("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/clusteringBasedOnQuantSeqReads.pdf")
+set.seed(123)
+k.max = 15
+data = assay(data_counts_injection_readsCPM)
+wss <- sapply(1:k.max, 
+              function(k){kmeans(data, k, nstart=50,iter.max = 1000 ,algorithm="MacQueen")$tot.withinss})
 
+
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
 for(i in 1:nclus){
-   
+  
+
+  
   diff_clusters[[i]] <- data_counts_injection_readsCPM[which(clusterRPMs$cluster==i),]
   plot_clusters[[i]] = melt(assay(diff_clusters[[i]]))
   plot_clusters[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_clusters[[i]]))
@@ -103,13 +126,29 @@ assay(zygoticTranscripts)[which(assay(zygoticTranscripts)<0)]<-0
 assay(zygoticTranscripts) = assay(zygoticTranscripts)+ 0.00001
 maxTC  = apply(assay(zygoticTranscripts),1,max)
 assay(zygoticTranscripts) = assay(zygoticTranscripts)/maxTC
-nclus=5
-cluster_tc = kmeans(assay(zygoticTranscripts),centers = 5)
+
+
+
+nclus=7
+
+cluster_tc = kmeans(assay(zygoticTranscripts),centers = nclus)
 diff_tcClusters = vector("list",nclus)
 
 plot_clusters =  vector("list",nclus)
 
 pdf("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/ZGAgene_cluster.pdf")
+set.seed(123)
+k.max = 15
+data = assay(zygoticTranscripts)
+wss <- sapply(1:k.max, 
+              function(k){kmeans(data, k, nstart=50,iter.max = 1000 ,algorithm="MacQueen")$tot.withinss})
+
+
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+
 for(i in 1:nclus){
   
   diff_tcClusters[[i]] <- zygoticTranscripts[which(cluster_tc$cluster==i),]
@@ -117,12 +156,18 @@ for(i in 1:nclus){
   plot_clusters[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_tcClusters[[i]]))
   plot_clusters[[i]]$category  = paste0("clus",i) 
   q = ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=X1)) + geom_line(aes(col=X1)) + scale_x_discrete(limits=c(0,30,65,105,140,170)) + theme(legend.position="none")
-  q  = q+ ggtitle(paste0("clus",i," n=",nrow(assay(diff_tcClusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
+  q  = q+ ggtitle(paste0("clus",i," n=",nrow(assay(diff_tcClusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized TC conversion rate")
   print(q)
-  p =  ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot() + ggtitle(paste0("clus",i," n=",nrow(assay(diff_tcClusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
+  p =  ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot() + ggtitle(paste0("clus",i," n=",nrow(assay(diff_tcClusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized TC conversion rate")
   p = p + scale_x_discrete(limits=c(0,30,65,105,140,170)) 
   print(p)
   
 }
 
+
+### trying out the elbow method : 
+
+
 dev.off()
+
+

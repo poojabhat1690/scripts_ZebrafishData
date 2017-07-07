@@ -1,69 +1,83 @@
-#### looking at RNAseq data
+library(reshape)
+library(ggplot2)
 library(SummarizedExperiment)
-
-### 
-
-RNAseqCounts = read.table("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/rnaSeqReads_featureCounts.txt",stringsAsFactors = F,header=T)
-sampleInfo = read.delim("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/ucscBrowser/RNAseqDatasets_sampleInfo.txt",sep="\t",header=F,stringsAsFactors = F)
-RNAseqCounts$Length = RNAseqCounts$Length/1000
-reads_RNAseq = RNAseqCounts[,c(7:ncol(RNAseqCounts))]
-#colnames(reads_RNAseq) = sampleInfo$V3
-reads_RNAseq = reads_RNAseq/RNAseqCounts$Length
-scalingFactor = apply(reads_RNAseq,2,sum)/1000000
-reads_RNAseq  = t(reads_RNAseq)
-reads_RNAseq = reads_RNAseq/scalingFactor
-reads_RNAseq = as.data.frame(t(reads_RNAseq))
-colnames(reads_RNAseq) = sampleInfo$V3
-rownames(reads_RNAseq) = RNAseqCounts$Geneid
-
-reads_RNAseq_5TPM = reads_RNAseq[which(apply(reads_RNAseq,1,max)>5),]
-reads_RNAseq_5TPM$`256cell` = NULL
-corrlation_timepoints = cor(reads_RNAseq)
-
-corrplot::corrplot(corrlation_timepoints,type = "lower")
-
-
-#### RNAseq and quantSeq correlation - I have a problem here .. the quantSeq data only has gene names but the RNAseq has ENS ids
-
-sampleInfoPath = read.delim("/Volumes/groups-1//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/dataDescription.txt",header = F,stringsAsFactors = F)
-
-filePaths = file.path("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/counts/",sampleInfoPath$V1)
-
-quantSeqReads = lapply(filePaths,function(x) read.table(x,header=T,stringsAsFactors = F,sep="\t"))
-
-
-CPM_quantSeq = lapply(quantSeqReads,function(x) x$ReadsCPM)
-CPM_quantSeq = do.call(cbind,CPM_quantSeq)
-#CPM_quantSeq = as.data.frame(CPM_quantSeq)
-metadata = quantSeqReads[[1]][,c(1,2,3,6,4)]
-#CPM_quantSeq = cbind.data.frame(metadata,CPM_quantSeq)
-metadata_granges = GRanges(metadata)
-colnames(CPM_quantSeq) = sampleInfoPath$V4
-
-CPM_quantSeq_summarizedExpt = SummarizedExperiment(assays=list(counts=CPM_quantSeq),rowData=metadata_granges, colData=sampleInfoPath)
-CPM_quantSeq = cbind.data.frame(metadata,CPM_quantSeq)
-library(dplyr)
-###### from bioconductor get the gene names
-CPM_quantSeq_split = split(CPM_quantSeq,CPM_quantSeq$Name,T)
-CPM_quantSeq_split = lapply(CPM_quantSeq_split, function(x) colSums(x[,c(6:ncol(x))]))
-CPM_quantSeq_split = do.call(rbind,CPM_quantSeq_split)
-CPM_quantSeq_split = as.data.frame(CPM_quantSeq_split)
-
-##### converting RNAseq enssembl Ids to the gene names : 
 library(biomaRt)
+sampleInfoPath = read.delim("/Volumes/groups-1//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/dataDescription.txt",header = F)
+sampleInfoPath = sampleInfoPath[which(sampleInfoPath$V7 == "yes"),]
+
+filePaths = file.path("/Volumes/groups-1//ameres/Pooja/Projects/zebrafishAnnotation/slamSeq/counts/",sampleInfoPath$V1)
+
+data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
+names(data_counts) = sampleInfoPath$V6
+
+### get the CPMS of all 
+
+RPM_control= do.call(cbind,lapply(data_counts,function(x) x$ReadsCPM))
+RPM_control = as.data.frame(RPM_control)
+
+RPM_control  = as.data.frame(t(RPM_control))
+RPM_control$condition = rownames(RPM_control)
+RPM_control_split = split(RPM_control,RPM_control$condition,T)
+RPM_control_split = lapply(RPM_control_split,function(x) colMeans(x[,c(1:(ncol(x))-1)]))
+RPM_control_combined = do.call(rbind,RPM_control_split)
+RPM_control_combined = (t(RPM_control_combined))
+
+###
+metadata = data_counts[[1]][,c(1:6)]
 
 listMarts(host = "www.ensembl.org")
 
 ensembl  = useMart(biomart = "ENSEMBL_MART_ENSEMBL",dataset="drerio_gene_ensembl",host="www.ensembl.org")
-geneNames_id = getBM(attributes = c("ensembl_gene_id","external_gene_name","gene_biotype"),values = RNAseqCounts$Geneid,filters="ensembl_gene_id",mart = ensembl)
-geneNames_id = geneNames_id[which(geneNames_id$gene_biotype=="protein_coding"),]
-reads_RNAseq_merged = merge(reads_RNAseq,y =geneNames_id,by.x="row.names",by.y="ensembl_gene_id")
 
-quantSeqAndRnaSeq = merge(CPM_quantSeq_split,reads_RNAseq_merged,by.x="row.names",by.y="external_gene_name",all=T)
-quantSeqAndRnaSeq = quantSeqAndRnaSeq[-1,] 
-quantSeqAndRnaSeq$Row.names = NULL
-quantSeqAndRnaSeq$gene_biotype = NULL
-quantSeqAndRnaSeq  = quantSeqAndRnaSeq[complete.cases(quantSeqAndRnaSeq),]
-quantSeqAndRnaSeq_5cpm = quantSeqAndRnaSeq[which(apply(quantSeqAndRnaSeq,1,max)>100),]
-allCorrelations = cor(quantSeqAndRnaSeq_5cpm,use = "complete.obs",method = "pearson")
-corrplot::corrplot(allCorrelations)
+geneName_ensemblIds = getBM(attributes = c("external_gene_name","ensembl_gene_id"),filters = "external_gene_name",values = metadata$Name,mart = ensembl)
+colnames(geneName_ensemblIds) = c("Name","ensembl_gene_id")
+library(plyr)
+metadata_combine = join(metadata,geneName_ensemblIds,match="first")
+
+metadata = makeGRangesFromDataFrame(metadata_combine,keep.extra.columns = T,ignore.strand = F,starts.in.df.are.0based = T,seqnames.field = "Chromosome",start.field = "Start",end.field = "End",strand.field = "Strand")
+rownames(RPM_control_combined) = metadata$ensembl_gene_id
+     
+RPM_control_combined = SummarizedExperiment(assays = RPM_control_combined,rowData = (metadata))
+library(dplyr)
+
+RPM_control_combined_split = split(as.data.frame(assay(RPM_control_combined)),rownames(RPM_control_combined),T)
+RPM_control_combined_split = lapply(RPM_control_combined_split,function(x) colMeans(x))
+RPM_control_combined_perGene = do.call(rbind,RPM_control_combined_split)
+
+max_RPM = which(apply((RPM_control_combined_perGene),1,max)>5)
+RPM_control_combined = RPM_control_combined_perGene[max_RPM,]
+correlation_samples = cor((RPM_control_combined_perGene))
+corrplot::corrplot(correlation_samples)
+
+
+#### reading in the rnaSeq counts produced using featureCounts
+
+
+RNAseqCounts = read.table("/Volumes/groups-1/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/rnaSeqReads_featureCounts_strandSpecific_allGenes.txt",sep="\t",stringsAsFactors = F,header = T)
+colnames(RNAseqCounts)
+colnames(RNAseqCounts) = c(colnames(RNAseqCounts[1:6]),"RNAseq1KCell","RNAseq2-4cell","RNAseq2-4cell","RNAseq256cell","RNAseq28hpf","RNAseq28hpf","RNAseq2dpf","RNAseq2dpf","RNAseq5dpf","RNAseq5dpf","RNAseqBud","RNAseqBud","RNAseqDome","RNAseqDome","RNAseq1Kcell","RNAseqOblong","RNAseqShield","RNAseqShield","RNAseqShield","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOvary","RNAseqOvary","RNAseqOvary","RNAseqSperm","RNAseqSperm","RNAseqTestis","RNAseqTestis","RNAseqTestis","RNAseqTestis","RNAseqTestis","RNAseqTestis")
+RNAseq_onlyCounts = RNAseqCounts[,c(7:ncol(RNAseqCounts))]
+RNAseqCounts$Length = RNAseqCounts$Length/1000
+
+
+
+tpm <- function(counts, lengths) {  
+  rate <- counts /lengths
+  rate / sum(rate) * 1e6
+}
+
+RNAseq_TPM = apply(RNAseq_onlyCounts,2,function(x) tpm(x,RNAseqCounts$Length))
+metadata_RNAseq = RNAseqCounts[,c(1,6)]
+RNAseq_TPM = as.data.frame(t(RNAseq_TPM))
+RNAseq_TPM$timepoints = c("RNAseq1KCell","RNAseq2-4cell","RNAseq2-4cell","RNAseq256cell","RNAseq28hpf","RNAseq28hpf","RNAseq2dpf","RNAseq2dpf","RNAseq5dpf","RNAseq5dpf","RNAseqBud","RNAseqBud","RNAseqDome","RNAseqDome","RNAseq1Kcell","RNAseqOblong","RNAseqShield","RNAseqShield","RNAseqShield","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOocyte","RNAseqOvary","RNAseqOvary","RNAseqOvary","RNAseqSperm","RNAseqSperm","RNAseqTestis","RNAseqTestis","RNAseqTestis","RNAseqTestis","RNAseqTestis","RNAseqTestis")
+RNAseq_TPM_split = split(RNAseq_TPM,RNAseq_TPM$timepoints,T)
+RNAseq_TPM_split = lapply(RNAseq_TPM_split,function(x) colMeans(x[,c(1:(ncol(x))-1)]))
+RNAseq_TPM_split_combined = do.call(rbind,RNAseq_TPM_split)
+RNAseq_TPM_split_combined = (t(RNAseq_TPM_split_combined))
+rownames(RNAseq_TPM_split_combined) = RNAseqCounts$Geneid
+
+quantSeq_RNAseqCombined = merge(RPM_control_combined,RNAseq_TPM_split_combined,by="row.names")
+
+quantSeq_RNAseqCombined$Row.names = NULL
+quantSeq_RNAseqCombined_cor = cor(quantSeq_RNAseqCombined,method = "spearman")
+corrplot::corrplot(quantSeq_RNAseqCombined_cor)

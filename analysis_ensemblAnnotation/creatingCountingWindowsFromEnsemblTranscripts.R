@@ -59,9 +59,4 @@ allAnnotations_minus_ranges_reduced_df = do.call(rbind,allAnnotations_minus_rang
 countingWindows = rbind(allAnnotations_plus_ranges_reduced_df,allAnnotations_minus_ranges_reduced_df)
 countingWindows$starts = countingWindows$starts -1
 chromosomes_mm = paste0("chr",c("2L","2R","3L","3R","4","X","Y"))
-write.table(countingWindows, "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/analysis_ensemblAnnotation/countingWindoes_ensemblAnnotation.bed",sep="\t",quote = F)
-
-
-#### now creating the counting windows for multimapping reassignment
-
-
+write.table(countingWindows, "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/analysis_ensemblAnnotation/countingWindoes_ensemblAnnotation.bed",sep="\t",quote = F,row.names = F,col.names = F)
