@@ -1,15 +1,15 @@
----
-title: "assignToUTRs"
-author: "Pooja Bhat"
-date: "January 21, 2017"
-output: html_document
----
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
+
+
+
+
+
+
+
+
 ## this script creates a file for the accepted refSeq and ensembl 3'UTR overlapping ends. 
-```{r readingInAndSubsetting}
+
 
 library(checkmate)
 
@@ -45,10 +45,10 @@ total_nopas_accepted = total_nopas[which(total_nopas$V10<0.24),]
 
 
 
-```
 
 
-```{r}
+
+
 allPeaks = rbind(total_pas_accepted, total_nopas_accepted)
 
 
@@ -60,12 +60,12 @@ peaks_accepted_nonAccepted_sum = sum(as.numeric(unlist(strsplit(peaks_accepted_n
 
 cat(paste0("The fraction of counts accepted:",acceptedPeaks_sum/peaks_accepted_nonAccepted_sum))
 
-```
+
 
 ## now checking if the peaks are at the same position as the UTRs. 
 
 
-```{r}
+
 # 
 # allPeaks_positive = allPeaks[which(allPeaks$V6 == "+"),]
 # allPeaks_negative = allPeaks[which(allPeaks$V6 == "-"),]
@@ -83,10 +83,10 @@ cat(paste0("The fraction of counts accepted:",acceptedPeaks_sum/peaks_accepted_n
 # 
 # allPeaks = rbind(allPeaks_positive,allPeaks_negative)
 
-```
+
 
 ## writing these tables 
-```{r}
+
 
 write.table(allPeaks,paste0(BOut, "/polyAmapping_allTimepoints/n_100_global_a0/ends_all_10threshold_n100.txt"),sep="\t",quote = F,row.names = F)
 
@@ -100,5 +100,5 @@ allPeaks$V4 = allPeaks$V14
 allPeaks_short = cbind.data.frame(allPeaks[,c(1:6)],allPeaks$overlap)
 write.table(allPeaks_short,paste0(BOut, "/polyAmapping_allTimepoints/n_100_global_a0/ends_all_10threshold_n100.bed"),sep = "\t",quote = F,row.names = F,col.names = F)
 
-```
+
 

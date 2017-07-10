@@ -1,22 +1,22 @@
----
-title: "90percentCustomIntergenic"
-author: "Pooja Bhat"
-date: "January 22, 2017"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 
 
-```{r}
+
+
+
+
+
+
+
+
+
+
+
 library(checkmate)
-```
+
 
 ## readin in peaks, intergenic, refSeq and all other ends
-```{r}
+
 
 intergenicPeaks = read.table(paste0(BOut, "/coverage/allIntergenicPeaks_n100_new.txt"),sep="\t",stringsAsFactors = F,header = F)
 #assertDataFrame(intergenicPeaks,ncols = 26)
@@ -25,11 +25,11 @@ ends_all= read.delim(paste0(BOut, "/polyAmapping_allTimepoints/n_100_global_a0/e
 assertDataFrame(ends_all, ncols = 22)
 
 
-```
+
 
 
 ## rearranging the data frames
-```{r}
+
 intergenicPeaks$V4 = intergenicPeaks$V16
 intergenicPeaks_rearranged = cbind.data.frame(intergenicPeaks$V1,intergenicPeaks$V2, intergenicPeaks$V3, intergenicPeaks$V4, intergenicPeaks$V5, intergenicPeaks$V6, intergenicPeaks$V19,V10="intergenic") 
 colnames(intergenicPeaks_rearranged) = paste("V",c(1:ncol(intergenicPeaks_rearranged)),sep="")
@@ -43,10 +43,10 @@ assertDataFrame(ends_all_rearranged,nrows = nrow(ends_all),ncols = 8)
 querySubject = rbind(intergenicPeaks_rearranged, ends_all_rearranged)
 
 
-```
+
 
 ## get sum of the polyA reads
-```{r}
+
 
 ### getting sums of the merged positions : 
 
@@ -84,10 +84,10 @@ onlyIntergenic = totalPeaks[which(totalPeaks$peakKind == "intergenic"),]
 #onlyIntergenic_bed$peakName = onlyIntergenic$external_gene_name
 onlyIntergenic_bed = onlyIntergenic[,c(1:6)]
 
-```
+
 
 ## writing the tables
-```{r}
+
 
 system(paste0("mkdir ", BOut, "/final90percent"))
 write.table(totalPeaks_bed,paste0(BOut, "/final90percent/ends_greater90percent_intergenic_n100.bed"),sep="\t", quote=F, row.names=F,col.names=F)
@@ -97,6 +97,6 @@ write.table(onlyIntergenic,paste0(BOut, "/final90percent/onlyIntergenic_90percen
 write.table(onlyIntergenic_bed, paste0(BOut, "/final90percent/onlyIntergenic_90percent_n100.bed"),sep="\t", row.names = F, col.names = F,quote = F)
 
 
-```
+
 
 
