@@ -1,17 +1,9 @@
----
-title: "sequencesForNucleotideProfiles"
-author: "Pooja Bhat"
-date: "January 20, 2017"
-output: html_document
----
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## this is used for making nucleotide profiles to differnetiate between false and true positive sites.
 
-```{r}
+cat("loading packages")
+
 library(checkmate)
 library(Biostrings)
 library(ggplot2)
@@ -19,11 +11,10 @@ library(reshape)
 library(GenomicFeatures)
 library(biomaRt)
 
-```
 
 
 #reading in the fasta and the bed file for all ends
-```{r}
+
 fasta_polyApeaks_120bps = read.table(paste0(InPath, "/peaks_5_120bps.fa"),stringsAsFactors = F)
 peaks_total_modified = read.table(paste0(InPath, "/peaks_5_120bps.bed"))
 
@@ -32,9 +23,7 @@ assertDataFrame(fasta_polyApeaks_120bps)
 nRow_fasta = nrow(fasta_polyApeaks_120bps)/2
 assertDataFrame(peaks_total_modified,nrows = nRow_fasta)
 
-```
 ## now adding the fasta sequences to the bed file 
-```{r}
 
 sequences_polyApeaks_120bps = fasta_polyApeaks_120bps[seq(2,nrow(fasta_polyApeaks_120bps),2),]
 ## rearranging the bed file to put the exact coordinates of the priming sites (not +/- 60nts)
@@ -49,5 +38,8 @@ peaks_bedFile$downstreamSeq = substr(x = peaks_bedFile$sequences_polyApeaks_120b
 content_nucleotides = mapply(function(x) alphabetFrequency(DNAString(x)),peaks_bedFile$downstreamSeq)
 peaks_bedFile$totalAs = content_nucleotides["A",]/20
 write.table(peaks_bedFile,paste0(InPath, "/sequences_120nts.bed"),sep="\t",quote = F,row.names = F,col.names = F)
-```
+
+
+
+
 
