@@ -33,14 +33,18 @@ customAnnotation = rbind(customAnnotation_plus,customAnnotation_minus)
 
 write.table(customAnnotationIntoUTR,paste0(BOut, "/ExtendingINtergenicRegions/customAnnotation_longestTranscripts_100IntoUTR.bed"),sep="\t",quote = F,row.names = F,col.names = F)
 
-counts_inUTR100 = system(paste0("bedtools multicov -split -p -bams ", BIn, "//*.sortedByCoord.out.bam -bed ", BOut, "/ExtendingINtergenicRegions/customAnnotation_longestTranscripts_100IntoUTR.bed"),intern=T)
+counts_inUTR100 = system(paste0("bedtools multicov -split -p -bams ", BIn, "/rnaseq/*.sortedByCoord.out.bam -bed ", BOut, "/ExtendingINtergenicRegions/customAnnotation_longestTranscripts_100IntoUTR.bed"),intern=T)
 
 write.table(counts_inUTR100,paste0(BOut, "/coverage/customAnnotation_longestTranscripts_IntoUTR_coverage_",args[1],"_",args[2],".bed"),quote = F,row.names = F,col.names = F)
 
 counts_inUTR100 = read.table(paste0(BOut, "/coverage/customAnnotation_longestTranscripts_IntoUTR_coverage_",args[1],"_",args[2],".bed"),sep="\t")
 
 numReplicates <- length(9:ncol(counts_inUTR100))
-counts_inUTR100$meanCounts = rowMeans(counts_inUTR100[,9:ncol(counts_inUTR100)])
+if(ncol(counts_inUTR100)==9){
+  counts_inUTR100$meanCounts = counts_inUTR100$meanCounts[,9]
+}else{
+  counts_inUTR100$meanCounts = rowMeans(counts_inUTR100[,9:ncol(counts_inUTR100)])
+}
 
 
 
@@ -118,13 +122,18 @@ for(i in 1:nrow(thresholds)){
   ### calculating RNAseq signal in the offset refion
     ### -S is used as mapping of this RNAseq sample as reads were not reverse-complemented before mapping. 
   
-  counts_offSet = system(paste0("bedtools  multicov -split -p -bams ", BIn, "//*.sortedByCoord.out.bam -bed ", BOut, "/coverage/customAnnotation_longestTranscripts_tmp_downstream.bed"),intern = T)
+  counts_offSet = system(paste0("bedtools  multicov -split -p -bams ", BIn, "/rnaseq/*.sortedByCoord.out.bam -bed ", BOut, "/coverage/customAnnotation_longestTranscripts_tmp_downstream.bed"),intern = T)
   write.table(counts_offSet,outFile,quote = F,row.names = F,col.names = F,sep="\t")
   
   counts_offSet = read.table(outFile,sep="\t")
   
+  if(ncol(counts_offSet==10)){
+    counts_offSet$meanCounts = counts_offSet[,10]
+  }else{
+    counts_offSet$meanCounts = rowMeans(counts_offSet[,10:ncol(counts_offSet)])
+    
+  }
   
-  counts_offSet$meanCounts = rowMeans(counts_offSet[,10:ncol(counts_offSet)])
   
   #### the column V9 contains the mean of RNAseq singal in the UTR. calculate thefraction of signal in the offSet bin to the signal inUTR (V9). 
   ## we continue extending the bins in the next iteration, only if the singal in the offset bin is >10% of signal in the UTR.
