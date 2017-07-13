@@ -2,7 +2,7 @@
 library(reshape2)
 library(ggplot2)
 args = c(200,0.1)
-BIn="//clustertmp/pooja/STARmapping/allMapped/"
+
 customAnnotation = read.table(paste0(BOut, "/intergenicPeaks/toExtend_longestEnsembl_refSeq_n100_sorted_distances.bed"),sep="\t")
 customAnnotation = customAnnotation[-which(customAnnotation$V14=="-1"),]
 
