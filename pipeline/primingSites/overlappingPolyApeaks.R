@@ -4,6 +4,7 @@ args = commandArgs(trailingOnly=T)
 library(ggplot2)
 library(reshape)
 library(GenomicFeatures)
+library(plyr)
 #library(dplyr)
 options(scipen=999)
 #peaks_plus = read.table("//groups/ameres/Pooja/Projects/wholePipeline/singleread100processing/42075_GGTATA_C9NM7ANXX_2_20160919B_20160919_5primetrimmed_trimmed_sizefiltered_polyAreads_polyAremoved_slamdunk_mapped_filtered_plusStrand_filtered.bed")
@@ -111,7 +112,7 @@ chromSizes = read.table("//groups/ameres/bioinformatics/references/danio_rerio/d
 colnames(chromSizes) = c("chr","len")
 library(plyr)
 peaks_total_modified_rearranged = join(peaks_total_modified_rearranged,chromSizes)
-peaks_total_modified_rearranged = peaks_total_modified_rearranged[-which(peaks_total_modified_rearranged$end >= peaks_total_modified_rearranged$len),]
+#peaks_total_modified_rearranged = peaks_total_modified_rearranged[-which(peaks_total_modified_rearranged$end >= peaks_total_modified_rearranged$len),]
 peaks_total_modified_rearranged$len = NULL
 write.table(peaks_total_modified_rearranged,args[3],sep="\t",quote = F,row.names = F,col.names = F)
 
