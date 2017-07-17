@@ -41,7 +41,7 @@ counts_inUTR100 = read.table(paste0(BOut, "/coverage/customAnnotation_longestTra
 
 numReplicates <- length(9:ncol(counts_inUTR100))
 if(ncol(counts_inUTR100)==9){
-  counts_inUTR100$meanCounts = counts_inUTR100$meanCounts[,9]
+  counts_inUTR100$meanCounts = counts_inUTR100[,9]
 }else{
   counts_inUTR100$meanCounts = rowMeans(counts_inUTR100[,9:ncol(counts_inUTR100)])
 }
