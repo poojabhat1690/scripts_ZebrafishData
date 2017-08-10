@@ -5,7 +5,7 @@
 CELLLINE="dr"
 
 
-PIPELINE="/groups/ameres/Pooja/Projects/zebrafishAnnotation/pipeline/"
+PIPELINE="/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/scripts_ZebrafishData/pipeline/"
 ANNOBASE="/groups/ameres/Pooja/Projects/zebrafishAnnotation/"
 GBASE="/groups/ameres/bioinformatics/references/danio_rerio/dr10//"
 
@@ -106,23 +106,33 @@ cd $BOUT
 #extract +1 to +20 A fraction
 module unload R
 module load R/3.3.0
-rmd="$PIPELINE/OverlappingPrimingSitesWithAnnotations/sequencesForNucleotideProfile.Rmd"
+
+TMP="$QUANT_ALIGN"/n_100_global_a0/
+
+MINUSSUM=`awk '{ sum += $1 } END { print sum } '  "$TMP"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_minusStrand_countsUnique.bed`
+PLUSSUM=`awk '{ sum += $1 } END { print sum } '  "$TMP"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_plusStrand_countsUnique.bed`
+TOTALSUM=`expr $PLUSSUM + $MINUSSUM`
+THRESHOLD=`expr  $"$TOTALSUM" / 1000000`
+
+
+
+rmd="$PIPELINE/OverlappingPrimingSitesWithAnnotations/sequencesForNucleotideProfile.R"
 INPUT=$QUANT_ALIGN/n_100_global_a0/
-Rscript --slave -e "InPath='$INPUT';set.seed(100);rmarkdown::render('$rmd', output_file='$INPUT/sequencesForNucleotideProfile.html')"
+Rscript --vanilla -e "InPath='$INPUT';threshold="$THRESHOLD";source('$rmd')"
 
 
 mkdir -p $BOUT/PASplot
 OUTPUT=$BOUT/PASplot
-rmd="$PIPELINE/OverlappingPrimingSitesWithAnnotations/nucleotideProfiles_markdown.new.Rmd"
+rmd="$PIPELINE/OverlappingPrimingSitesWithAnnotations/nucleotideProfiles_markdown.new.R"
 
-Rscript --slave -e "PPath='$PIPELINE'; InPath='$INPUT'; OutPath='$OUTPUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';rmarkdown::render('$rmd', output_file='$OUTPUT/nucleotideProfiles_markdown.new.html')"
+Rscript --slave -e "PPath='$PIPELINE'; InPath='$INPUT'; OutPath='$OUTPUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';source('$rmd')"
 
 
 OUTPUT=$BOUT/intergenicPeaks
 mkdir -p $OUTPUT
 
-rmd="$PIPELINE/intergenicPeaks/getLongestUTR.Rmd"
-Rscript --slave -e "PPath='$PIPELINE'; InPath='$INPUT'; OutPath='$OUTPUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';rmarkdown::render('$rmd', output_file='$BOUT/getLongestUTR.html')"
+rmd="$PIPELINE/intergenicPeaks/getLongestUTR.R"
+Rscript --slave -e "PPath='$PIPELINE'; InPath='$INPUT'; OutPath='$OUTPUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';source('$rmd')"
 
 
 source $PIPELINE/intergenicPeaks/getClosestGene.sh
@@ -135,11 +145,11 @@ mkdir $BOUT/coverage
 Rscript --vanilla -e "BIn='$BIN'; BOut='$BOUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL'; source('$PIPELINE/intergenicPeaks/addingIntergenicPeaks.R')"
 
 
-rmd="$PIPELINE/90PercentFiltering_merging_countingWindows/assignToUTRs.Rmd"
-Rscript --slave -e "BIn='$BIN'; BOut='$BOUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';rmarkdown::render('$rmd', output_file='$BOUT/assignToUTRs.html')"
+rmd="$PIPELINE/90PercentFiltering_merging_countingWindows/assignToUTRs.R"
+Rscript --slave -e "BIn='$BIN'; BOut='$BOUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';source('$rmd')"
 
-rmd="$PIPELINE/90PercentFiltering_merging_countingWindows/90PercentFiltering.Rmd"
-Rscript --slave -e "BIn='$BIN'; BOut='$BOUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';rmarkdown::render('$rmd', output_file='$BOUT/90PercentFiltering.html')"
+rmd="$PIPELINE/90PercentFiltering_merging_countingWindows/90PercentFiltering.R"
+Rscript --slave -e "BIn='$BIN'; BOut='$BOUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL';source('$rmd')"
 
 Rscript --vanilla -e "BIn='$BIN'; BOut='$BOUT'; ucscDir='$UCSC'; ensemblDir='$ENSEMBL'; fai='$GENOME.fai'; source('$PIPELINE/90PercentFiltering_merging_countingWindows/mergingCounting.new.R')"
 
