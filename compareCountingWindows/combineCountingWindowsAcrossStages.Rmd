@@ -46,8 +46,15 @@ countingWindows_allStages$stage = row.names(countingWindows_allStages)
 
 countingWindows_allStages$stage = gsub("\\..*","",countingWindows_allStages$stage)
 rownames(countingWindows_allStages) = NULL
+
+#### group and collapse 
+
+library(dplyr)
+countingWindows_allStages$id = paste0(countingWindows_allStages$V1,countingWindows_allStages$V2,countingWindows_allStages$V3,countingWindows_allStages$V4,countingWindows_allStages$V6)
+countingWindows_allStages = countingWindows_allStages %>% group_by(id) %>%  mutate(stageCombine = paste0(stage, collapse = ";")) 
+
 countingWindows_allStages = countingWindows_allStages[!duplicated(countingWindows_allStages[,c(1:6)]),]
-countingWindows_allStages.Granges =  makeGRangesFromDataFrame(df = countingWindows_allStages,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",starts.in.df.are.0based = T,strand.field = "V6")
+#countingWindows_allStages.Granges =  makeGRangesFromDataFrame(df = countingWindows_allStages,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",starts.in.df.are.0based = T,strand.field = "V6")
 
 write.table(countingWindows_allStages,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/allCountingWindows_stagesCombined.bed",sep="\t",quote = F,row.names = F)
 
@@ -71,6 +78,7 @@ countingWindows_allStages$stage = row.names(countingWindows_allStages)
 countingWindows_allStages$stage = gsub("\\..*","",countingWindows_allStages$stage)
 rownames(countingWindows_allStages) = NULL
 countingWindows_allStages = countingWindows_allStages[!duplicated(countingWindows_allStages[,c(1:6)]),]
+library(GenomicRanges)
 countingWindows_allStages.Granges =  makeGRangesFromDataFrame(df = countingWindows_allStages,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",starts.in.df.are.0based = T,strand.field = "V6")
 
 countingWindows_allStages.Granges.Reduce = as.data.frame(reduce(x = countingWindows_allStages.Granges))

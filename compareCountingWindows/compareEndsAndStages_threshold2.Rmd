@@ -1,0 +1,185 @@
+---
+title: "comparing counting windows from different stages"
+author: "Pooja Bhat"
+date: "July 19, 2017"
+output: "pdf_document"
+pdf_document: default
+
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+```{r comparing the high confidence ends,echo=FALSE}
+
+
+#### checking custom annotations of different developmental stages :
+
+
+### the stages are : 
+# 1dpf
+# 256 cell stage
+# 2 cell 
+# 2dpf
+# 4pdf
+# bud
+# dome
+# oocyte
+# sphere
+# testis
+
+path_allStages = "/Volumes/clustertmp/bioinfo/pooja/SLAMannotation/dr/onlyQuantSeq_1/"
+stages = c("1dpf","256cell","2cell","2dpf","4dpf","bud","dome","oocyte","sphere","testis")
+completePath = paste0(path_allStages,stages,"/output/final90percent/")
+
+##### comparing high confidence ends from the different stages
+
+completePath_highConfidenceEnds = paste0(completePath,"ends_greater90percent_intergenic_n100.bed")
+
+highConfidenceEnds = lapply(completePath_highConfidenceEnds,function(x) read.delim(x,stringsAsFactors = F,header = F))
+names(highConfidenceEnds) = stages
+
+library(reshape)
+nuMberOfPrimingSites = melt(lapply(highConfidenceEnds,nrow))
+colnames(nuMberOfPrimingSites) = c("numberOfHighConfidenceEnds","stage")
+write.table(nuMberOfPrimingSites,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/numberOfHighConfidenceEnds_stages_threshold2.txt",sep="\t",row.names = F,quote = F)
+library(ggplot2)
+q  = ggplot(nuMberOfPrimingSites,aes(x=stage,y=numberOfHighConfidenceEnds)) + geom_bar(stat = "identity") + xlab("Stage") + ylab("number of high confidence ends")
+print(q)
+pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/compareCountingWindowsBetweenStages/numberOfHighConfidenceEnds_threshold2.pdf")
+print(q)
+dev.off()
+
+
+### comparing the intersection between these 
+
+  ### to do this, I create a list of 'ids' - based on - chr,start,end,strand, gene name and make a list of this. Once this is done. I will intersect and Reduce the list to give me the intersection between all. 
+
+### firstly I want to create a window of 10 nts to check for overlaps, since we cannot really compare exact overlaps. 
+  for(i in 1:length(highConfidenceEnds)){
+    temp_highConfideneEnds = highConfidenceEnds[[i]]
+    temp_highConfideneEnds_plus = temp_highConfideneEnds %>% filter(V6 == "+")
+     temp_highConfideneEnds_plus$start = temp_highConfideneEnds_plus$V3 -5 
+    temp_highConfideneEnds_plus$end = temp_highConfideneEnds_plus$V3 + 5
+ 
+    temp_highConfideneEnds_minus =  temp_highConfideneEnds %>% filter(V6 == "-")
+      temp_highConfideneEnds_minus$end = temp_highConfideneEnds_minus$V2 + 5
+      temp_highConfideneEnds_minus$start = temp_highConfideneEnds_minus$V2 - 5 
+       highConfidenceEnds[[i]] = rbind(temp_highConfideneEnds_plus,temp_highConfideneEnds_minus)
+  }
+
+  id_highConfidenceEnds = lapply(highConfidenceEnds,function(x) paste0(x$V1,x$V2,x$V3,x$V4,x$V6))
+  allIntersections  = Reduce(intersect, id_highConfidenceEnds)
+
+  ## now I want to check every other combination
+  
+    allCombinations = expand.grid(stages,stages)
+    allCombinations$intersection = NA
+   intersections_allCombinations =  as.data.frame(matrix(NA , nrow = length(stages),ncol = length(stages)))
+    for(i in 1:nrow(allCombinations)){
+      sample1 = id_highConfidenceEnds[which(stages == allCombinations[i,1])]
+      sample2 = id_highConfidenceEnds[which(stages == allCombinations[i,2])  ]
+      
+      intersections_allCombinations[which(stages == allCombinations[i,]$Var2),which(stages == allCombinations[i,]$Var1)] <- length(intersect(sample1[[1]],sample2[[1]]))
+      intersections_allCombinations[which(stages == allCombinations[i,]$Var1),which(stages == allCombinations[i,]$Var2)] <- length(intersect(sample1[[1]],sample2[[1]]))
+      allCombinations$intersection[i] =  length(intersect(sample1[[1]],sample2[[1]]))
+    }
+   
+   colnames(intersections_allCombinations) = stages
+   rownames(intersections_allCombinations )= stages  
+  write.table(intersections_allCombinations,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/intersectionsBetweenHighConfidenceEndsOfDifferentStages.txt",sep="\t",quote = F)
+  p = ggplot(allCombinations, aes(Var1, Var2)) + geom_tile(aes(fill = intersection))+geom_text(aes(label = round(intersection, 1))) + scale_fill_gradient(low = "white", high = "red") + xlab("Stage") + ylab("Stage")
+print(p)
+  
+    pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/compareCountingWindowsBetweenStages/intersectionBetweenAllStages.pdf")
+    print(p)
+    dev.off()
+    
+    
+
+    
+    ##### now i want to check the overlaps between windows ... for this I will create 10 nt windows and overlap them ...
+    ## i created  start and end for that in the previous step... 
+ 
+    allCombinations$overlaps = NA
+   
+     for(i in 1:nrow(allCombinations)){
+     
+       sample1 =  highConfidenceEnds[which(stages == allCombinations[i,1])]
+       sample2 =  highConfidenceEnds[which(stages == allCombinations[i,2])]
+     granges_1 = makeGRangesFromDataFrame(df = sample1,keep.extra.columns = T,seqnames.field = "V1",start.field = "start",end.field = "end",strand.field = "V6",ignore.strand = F )
+    
+  granges_2 = makeGRangesFromDataFrame(df = sample2,keep.extra.columns = T,seqnames.field = "V1",start.field = "start",end.field = "end",strand.field = "V6",ignore.strand = F )
+    
+  allCombinations$overlaps[i]= length(findOverlaps(granges_1,granges_2))
+     
+     }
+    
+      findOverlaps = ggplot(allCombinations, aes(Var1, Var2)) + geom_tile(aes(fill = overlaps))+geom_text(aes(label = round(overlaps, 1))) + scale_fill_gradient(low = "white", high = "red") + xlab("Stage") + ylab("Stage")
+print(findOverlaps)
+    
+```
+
+I wanted to enxt compare the high confidence intergenic ends that we identify in the different stages. This is still very exploratory and I want to see the deviation in the data we have. 
+
+```{r compare only high confidence intergenic ends between the samples}
+
+completePath_intergenicEnds = paste0(completePath,"onlyIntergenic_90percent_n100.bed")
+intergenicEnds = lapply(completePath_intergenicEnds,function(x) read.delim(x,stringsAsFactors = F,header = F))
+names(intergenicEnds) = stages
+
+
+
+library(reshape)
+nuMberOfIntergenicEnds = melt(lapply(intergenicEnds,nrow))
+colnames(nuMberOfIntergenicEnds) = c("nuMberOfIntergenicEnds","stage")
+write.table(nuMberOfIntergenicEnds,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/numberOfIntergenicEnds_stages.txt",sep="\t",row.names = F,quote = F)
+
+library(ggplot2)
+q  = ggplot(nuMberOfIntergenicEnds,aes(x=stage,y=nuMberOfIntergenicEnds)) + geom_bar(stat = "identity") + xlab("Stage") + ylab("number of intergenic ends")
+print(q)
+
+```
+
+looks like there is a relaitonship between the number of ends and the number of intergenic ends. This could just be a function of the number of polyA reads used in the samples or the sequencing depth. So the initial threshold to identify priming sites will probably have to be set differently for different samples. 
+
+
+
+```{r comparing pre-processing steps}
+
+
+
+path_preprocessing = paste0(path_allStages,stages,"/output/polyAmapping_allTimepoints/logs/")
+preProcessingFile=c()
+for(i in 1:length(path_preprocessing)){
+  preProcessingFile =  c(preProcessingFile,paste0(path_preprocessing[i],list.files(path_preprocessing[i],pattern = "pre*")))
+  
+}
+
+preProcessingStats = lapply(preProcessingFile,function(x) read.table(x,stringsAsFactors = F))
+names(preProcessingStats) = stages
+
+preProcessingStats= lapply(preProcessingStats,function(x) x[1:5,1])
+
+preProcessingStats_split = lapply(preProcessingStats,function(x) strsplit(x,":",T))
+preProcessingStats_split = lapply(preProcessingStats_split,function(x) lapply(x,function(y) y[2]))
+
+preProcessingStats_split_melt = melt(preProcessingStats_split)
+preProcessingStats_split_melt$value = as.numeric(as.character(preProcessingStats_split_melt$value))
+sampleNames = c("initialFile","adapterTrimmed","fivePrimeTrimming","polyAcontaining","finalFile")
+preProcessingStats_split_melt$sample = sampleNames
+#preProcessingStats_split_melt$stage = rep(stages,each = 5)
+library(dplyr)
+filalFile = preProcessingStats_split_melt %>% filter(sample=="finalFile")  
+ggplot(filalFile,aes(x=(L1),y=value)) + geom_bar(stat="identity")  
+
+```
+
+It looks like the number of ends we identify is based directly on the polyA readthrough. So we must either : 
+  
+  1. Normalize the cutoff to the number of polyA reads. 
+2. Consider even 1 read as indication of a priming site. 
