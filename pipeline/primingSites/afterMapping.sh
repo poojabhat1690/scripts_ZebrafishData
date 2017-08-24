@@ -7,6 +7,7 @@
 #$ -v GENOME
 #$ -v QUANT_ALIGN
 #$ -v PIPELINE
+#$ -v LOG
 #### after mapping 
 
 PARAMETER="$QUANT_ALIGN/sampleInfo.txt"
@@ -57,9 +58,12 @@ onNegative=$(wc -l  "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filter
 echo the numeber of unique positions of the genome that are covered by reads on the plus strand is "$onPositive" and on the minus strand is "$onNegative" >>"$DIR"/log_afterMapping.txt
 
 ###############
-# Filter above 10
+# Filter above THRESHOLD
 ###############
-THRESHOLD=5
+MINUSSUM=`awk '{ sum += $1 } END { print sum } '  "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_minusStrand_countsUnique.bed`
+PLUSSUM=`awk '{ sum += $1 } END { print sum } '  "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_plusStrand_countsUnique.bed`
+TOTALSUM=`expr $PLUSSUM + $MINUSSUM`
+THRESHOLD=`expr  $"$TOTALSUM" / 1000000`
 
 awk -vT=$THRESHOLD '{ if ($1 >=T) print  }' "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_minusStrand_countsUnique.bed >"$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_minusStrand_countsUnique_greaterThan"$THRESHOLD".bed
 awk -vT=$THRESHOLD '{ if ($1 >=T) print  }' "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_plusStrand_countsUnique.bed >"$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_plusStrand_countsUnique_greaterThan"$THRESHOLD".bed
@@ -94,8 +98,6 @@ bedtools merge  -d 0  -i "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_f
 
 ml  R/3.3.0
 
-
-
 ####### then getting the fasta sequence from these coordinates :
 
 
@@ -106,6 +108,6 @@ ml bedtools
 ### not merging this with the polyA peaks 
 
 ## first getting the bed file +/- 60nt of the polyA peaks
-Rscript  --vanilla $PIPELINE/primingSites/overlappingPolyApeaks.R "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_plusStrand_countsUnique_greaterThan"$THRESHOLD".bed_sorted_merged.bed "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_minusStrand_countsUnique_greaterThan"$THRESHOLD".bed_sorted_merged.bed "$DIR"/peaks_"$THRESHOLD"_120bps.bed
+Rscript  --vanilla $PIPELINE/primingSites/overlappingPolyApeaks.R "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_plusStrand_countsUnique_greaterThan"$THRESHOLD".bed_sorted_merged.bed "$DIR"/polyAreads_polyAremoved_pooled_slamdunk_mapped_filtered_bamTobed_minusStrand_countsUnique_greaterThan"$THRESHOLD".bed_sorted_merged.bed "$DIR"/peaks_"$THRESHOLD"_120bps.bed 
 
 bedtools getfasta -s -fi $GENOME -bed "$DIR"/peaks_"$THRESHOLD"_120bps.bed > "$DIR"/peaks_"$THRESHOLD"_120bps.fa

@@ -15,8 +15,8 @@ library(biomaRt)
 
 #reading in the fasta and the bed file for all ends
 
-fasta_polyApeaks_120bps = read.table(paste0(InPath, "/peaks_5_120bps.fa"),stringsAsFactors = F)
-peaks_total_modified = read.table(paste0(InPath, "/peaks_5_120bps.bed"))
+fasta_polyApeaks_120bps = read.table(paste0(InPath, "/peaks_",threshold,"_120bps.fa"),stringsAsFactors = F)
+peaks_total_modified = read.table(paste0(InPath, "/peaks_",threshold,"_120bps.bed"))
 
 
 assertDataFrame(fasta_polyApeaks_120bps)

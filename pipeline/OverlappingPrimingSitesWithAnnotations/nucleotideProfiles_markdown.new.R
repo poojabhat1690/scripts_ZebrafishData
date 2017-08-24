@@ -55,7 +55,7 @@ assertDataFrame(ensembl_annotation,ncol=7,types = c("character","numeric","numer
 assertDataFrame(exonAnnotation,ncol=7,types = c("character","numeric","numeric","character","numeric","character","character"))
 
 #### FIXME!!!!! for some reson I still have NR in the exon annotation
-exonAnnotation = exonAnnotation[-grep("NR",exonAnnotation$V7),]
+#exonAnnotation = exonAnnotation[-grep("NR",exonAnnotation$V7),]
 assert_set_equal(length(grep("NM",exonAnnotation$V7)),nrow(exonAnnotation))
 
 assertDataFrame(intronAnnotation,ncol=7,types = c("character","numeric","numeric","character","numeric","character","character"))

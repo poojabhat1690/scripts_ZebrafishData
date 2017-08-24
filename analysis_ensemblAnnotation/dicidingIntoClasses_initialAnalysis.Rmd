@@ -1,0 +1,273 @@
+---
+title: "iniitalAnalysisQuantSeq"
+author: "Pooja Bhat"
+date: "August 3, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# data
+
+the data used involves: 
+
+  1. SLAM seq time course
+  2. QuantSeq data for the UTR annotation
+  
+  
+this script uses the ensembl annotation to look at the datasets.
+
+
+```{r readSamples,echo=F}
+path_countFiles = "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/analysis_ensemblAnnotation/countMatrices/"
+names_path = list.files(path_countFiles,pattern = ".tsv")
+absolutePaths_counts = paste0(path_countFiles,list.files(path_countFiles,pattern = ".tsv"))
+counts_slamdunk = lapply(absolutePaths_counts,function(x) read.table(x,sep = "\t",header=T))
+names(counts_slamdunk) = names_path
+```
+
+```{r defineClasses of Genes based on data,echo=F}
+sampleInfo = read.delim(file = "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/sampleInfo.txt",sep="\t",header=F)
+sampleInfo$timeline = NA
+sampleInfo$timeline = c(NA,NA,"before","before","after","after","after",NA,NA,NA,"before","before","before","after","after","after","after","before","after","before","after","after","after","before")
+names(counts_slamdunk) = sampleInfo$V3
+beforeZGA = counts_slamdunk[which(sampleInfo$timeline == "before")]
+afterZGA = counts_slamdunk[which(sampleInfo$timeline == "after")]
+
+
+beforeZGA_rpm = lapply(beforeZGA,function(x) x$ReadsCPM)
+afterZGA_rpm = lapply(afterZGA,function(x) x$ReadsCPM)
+
+
+
+beforeZGA_rpm.df = do.call(cbind,beforeZGA_rpm)
+afterZGA_rpm.df = do.call(cbind,afterZGA_rpm)
+
+beforeZGA_rpm.mean = apply(beforeZGA_rpm.df,1,mean)
+afterZGA_rpm.mean = apply(afterZGA_rpm.df,1,mean)
+a = beforeZGA_rpm.mean/afterZGA_rpm.mean
+library(LSD)
+heatscatter(log2(beforeZGA_rpm.mean),log2(afterZGA_rpm.mean))
+
+png("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/ensemblAnnotationAnalysis_beforeAftrZGA_heatScatter.png")
+heatscatter(log2(beforeZGA_rpm.mean),log2(afterZGA_rpm.mean))
+dev.off()
+
+
+
+beforePlusAfter = cbind.data.frame(beforeZGA_rpm.mean,afterZGA_rpm.mean)
+
+### also getting the total rpm
+allRPM = cbind(beforeZGA_rpm.df,afterZGA_rpm.df)
+allRPM = apply(allRPM,1,mean)
+
+beforePlusAfter_all = cbind(beforePlusAfter,allRPM)
+
+library(ggplot2)
+#ggplot(beforePlusAfter,aes(x=log2(beforeZGA_rpm.mean),y=log2(afterZGA_rpm.mean))) + geom_point(alpha = 0.3) + xlab("log2(beforeZGA)") + ylab("log2(afterZGA)")
+
+
+
+beforePlusAfter$foldChange = beforePlusAfter$beforeZGA_rpm.mean/beforePlusAfter$afterZGA_rpm.mean
+geneNames = beforeZGA[[1]]$Name
+beforePlusAfter = cbind.data.frame(beforePlusAfter,geneNames)
+##### getting the top 'X'% of genes in each catefory
+
+beforePlusAfter = beforePlusAfter[order(beforePlusAfter$foldChange,decreasing = T),]
+beforePlusAfter = beforePlusAfter[-which(beforePlusAfter$foldChange == Inf),]
+beforePlusAfter = beforePlusAfter[-which(beforePlusAfter$foldChange == "NaN"),]
+beforePlusAfter = beforePlusAfter[-which(beforePlusAfter$foldChange == 0),]
+
+zygotic = beforePlusAfter[which(beforePlusAfter$foldChange<0.5 ),]
+maternal  = beforePlusAfter[which(beforePlusAfter$foldChange>1.5 ),]
+maternalPlusZygotic = beforePlusAfter[which(beforePlusAfter$foldChange < 1.2 & beforePlusAfter$foldChange>0.8),]
+
+
+
+##### this is what Andi did before to classify genes as: 
+  # maternal 
+  # maternal + zygotic
+  # zygotic
+
+
+
+
+```
+
+
+
+
+```{r slamSeqData,echo=F}
+
+sampleInfo = read.delim(file = "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10_data/quantseq/sampleInfoIndex.txt",sep="\t",header=F)
+sampleInfo_slamseq = sampleInfo[c(11:24),]
+slamSeq = counts_slamdunk[11:24]
+names(slamSeq) = sampleInfo_slamseq$V3
+slamSeq_control = slamSeq[grep("con",names(slamSeq))]
+slamSeq_labelled = slamSeq[grep("4su",names(slamSeq))]
+
+### rearranging SLAMseq labelled  and control based on time
+slamSeq_labelled_rearranged  = list(slamSeq_labelled$`128_4su`,slamSeq_labelled$`30min_4su`,slamSeq_labelled$`65min_4su`,slamSeq_labelled$`105min_4su`,slamSeq_labelled$`140min_4su`,slamSeq_labelled$`170min_4su`)
+
+names(slamSeq_labelled_rearranged) = c("0","30","65","105","140","170")
+ 
+
+slamSeq_control_rearranged  = list(slamSeq_control$`128_con`,slamSeq_control$`30min_con`,slamSeq_control$`65min_con`,slamSeq_control$`105min_con`,slamSeq_control$`140min_con`,slamSeq_control$`170min_con`)
+
+names(slamSeq_labelled_rearranged) = c("0","30","65","105","140","170")
+names(slamSeq_control_rearranged) =  c("0","30","65","105","140","170")
+
+tcConversionRate_labelled = lapply(slamSeq_labelled_rearranged,function(x) x$ConversionRate)
+names(tcConversionRate_labelled) = names(slamSeq_labelled_rearranged)
+tcConversionRate_labelled.df = do.call(cbind.data.frame,tcConversionRate_labelled)
+
+tcConversionRate_control = lapply(slamSeq_control_rearranged,function(x) x$ConversionRate)
+names(tcConversionRate_control) = names(slamSeq_control_rearranged)
+tcConversionRate_control.df = do.call(cbind.data.frame,tcConversionRate_control)
+
+
+#### removing background 
+tcConversionRate_backgroundRemoved = tcConversionRate_labelled.df - tcConversionRate_control.df
+tcConversionRate_backgroundRemoved = as.matrix(tcConversionRate_backgroundRemoved)
+tcConversionRate_backgroundRemoved[which(tcConversionRate_backgroundRemoved<0)] <-0
+tcConversionRate_backgroundRemoved = as.data.frame(tcConversionRate_backgroundRemoved)
+tcConversionRate_backgroundRemoved$names = slamSeq_control_rearranged[[1]]$Name
+tcConversionRate_backgroundRemoved[which(tcConversionRate_backgroundRemoved$names=="vent"),]
+
+tcConversionRate_backgroundRemoved = cbind.data.frame(tcConversionRate_backgroundRemoved,beforePlusAfter_all)
+tcConversionRate_backgroundRemoved_5cpm  =tcConversionRate_backgroundRemoved[which(tcConversionRate_backgroundRemoved$beforeZGA_rpm.mean>5 |tcConversionRate_backgroundRemoved$afterZGA_rpm.mean>5 ),]
+
+heatscatter(x = log2(tcConversionRate_backgroundRemoved_5cpm$beforeZGA_rpm.mean),log2(tcConversionRate_backgroundRemoved_5cpm$afterZGA_rpm.mean),xlab = "log2(rpm_beforeZGA)",ylab= "log2(rpm_afterZGA)",main="Before-after above 5 RPM")
+
+tcConversionRate_backgroundRemoved_5cpm$foldChange = tcConversionRate_backgroundRemoved_5cpm$beforeZGA_rpm.mean/tcConversionRate_backgroundRemoved_5cpm$afterZGA_rpm.mean
+
+tcConversionRate_backgroundRemoved_5cpm$category = NA
+
+tcConversionRate_backgroundRemoved_5cpm$category[which(tcConversionRate_backgroundRemoved_5cpm$foldChange>1.5)]<-"maternal"
+tcConversionRate_backgroundRemoved_5cpm$category[which(tcConversionRate_backgroundRemoved_5cpm$foldChange<0.5 )]<- "zygotic"
+tcConversionRate_backgroundRemoved_5cpm$category[which(tcConversionRate_backgroundRemoved_5cpm$foldChange < 1.2 & tcConversionRate_backgroundRemoved_5cpm$foldChange>1)] <-"maternalAndZygotic"
+
+
+### adding the GO terms for this : 
+
+# source("https://bioconductor.org/biocLite.R")
+# biocLite("org.Dr.eg.db")
+
+require(org.Dr.eg.db)
+columns(org.Dr.eg.db)
+keys =  (keys(org.Dr.eg.db))
+a = select(org.Dr.eg.db,keys = keys,columns = c("ENTREZID","GO","SYMBOL"))
+
+### selecting the gene names 
+
+
+library(GO.db)
+b = select(GO.db, keys=a$GO, columns=c("ONTOLOGY","TERM"), keytype="GOID")
+
+totalGOid = cbind(a,b)
+#### maternal 
+
+tcConversionRate_backgroundRemoved_5cpm_maternal = tcConversionRate_backgroundRemoved_5cpm[which(tcConversionRate_backgroundRemoved_5cpm$category == "maternal"),]
+
+tcConversionRate_backgroundRemoved_5cpm_zygotic = tcConversionRate_backgroundRemoved_5cpm[which(tcConversionRate_backgroundRemoved_5cpm$category == "zygotic"),]
+
+tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic = tcConversionRate_backgroundRemoved_5cpm[which(tcConversionRate_backgroundRemoved_5cpm$category == "maternalAndZygotic"),]
+
+
+# plot(apply(tcConversionRate_backgroundRemoved_5cpm_maternal[,c(1:6)],2,mean))
+# plot(apply(tcConversionRate_backgroundRemoved_5cpm_zygotic[,c(1:6)],2,mean))
+# plot(apply(tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic[,c(1:6)],2,mean))
+
+###3 rearranging the dataframe
+library(reshape)
+tcConversionRate_backgroundRemoved_5cpm_maternal_melt = melt(tcConversionRate_backgroundRemoved_5cpm_maternal[,c(1:6)])
+tcConversionRate_backgroundRemoved_5cpm_maternal_melt$category = "maternal"
+
+tcConversionRate_backgroundRemoved_5cpm_zygotic_melt = melt(tcConversionRate_backgroundRemoved_5cpm_zygotic[,c(1:6)])
+tcConversionRate_backgroundRemoved_5cpm_zygotic_melt$category = "zygotic"
+
+tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic_melt = melt(tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic[,c(1:6)])
+tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic_melt$category = "maternalZygotic"
+
+
+ggplot(tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic_melt,aes(x=variable,y=log2(value))) + geom_boxplot(outlier.shape = NA) + xlab("time in minutes") + ylab("TC conversion rate") + ggtitle(paste0("Maternal + zygotic (n=",nrow(tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic),")"))
+ggplot(tcConversionRate_backgroundRemoved_5cpm_maternal_melt,aes(x=variable,y=log2(value))) + geom_boxplot(outlier.shape = NA) + xlab("time in minutes") + ylab("TC conversion rate") + ggtitle(paste0("Maternal (n=",nrow(tcConversionRate_backgroundRemoved_5cpm_maternal),")"))
+ggplot(tcConversionRate_backgroundRemoved_5cpm_zygotic_melt,aes(x=variable,y=log2(value))) + geom_boxplot(outlier.shape = NA) + xlab("time in minutes") + ylab("TC conversion rate") + ggtitle(paste0("Zygotic (n=",nrow(tcConversionRate_backgroundRemoved_5cpm_zygotic),")"))
+
+### get the medians 
+
+medians_maternal = apply(tcConversionRate_backgroundRemoved_5cpm_maternal[,c(1:6)],2,median)
+medians_zygotic = apply(tcConversionRate_backgroundRemoved_5cpm_zygotic[,c(1:6)],2,median)
+medians_maternalPlusZygotic = apply(tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic[,c(1:6)],2,median)
+
+allMedians = list(medians_maternal,medians_zygotic,medians_maternalPlusZygotic)
+names(allMedians) = c("maternal","zygotic","maternalPlusZygotic")
+allMedians  = melt(allMedians)
+allMedians$time = c(0,30,65,105,140,170)
+
+ggplot(allMedians,aes(x=time,y=value,group=L1,col=L1)) + geom_line() + xlab("time(min of labelling)") + ylab("median TC conversion rate") + theme_bw()
+
+png("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/medianTCConversions_ensemblCountingWindows.png")
+ggplot(allMedians,aes(x=time,y=value,group=L1,col=L1)) + geom_line() + xlab("time(min of labelling)") + ylab("median TC conversion rate") + theme_bw()
+dev.off()
+
+
+ggplot(allMedians,aes(x=time,y=log2(value),group=L1,col=L1)) + geom_line() + xlab("time(min of labelling)") + ylab("median TC conversion rate")
+
+```
+
+
+
+```{r plottingKnownExamples, echo=F}
+
+### maternal  - spata2l,mos
+spata2l = tcConversionRate_backgroundRemoved_5cpm_maternal[which(tcConversionRate_backgroundRemoved_5cpm_maternal$names == "spata2l"),][1:6]
+mos = tcConversionRate_backgroundRemoved_5cpm_maternal[which(tcConversionRate_backgroundRemoved_5cpm_maternal$names == "mos"),][1:6]
+
+spata2l_melt = melt(spata2l)
+mos_melt = melt(mos)
+
+png("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/examples_countingWindows_meternal_spata2l.png")
+ggplot(spata2l_melt,aes(x=as.numeric(as.character(variable)),y=value)) + geom_point() + ggtitle("spata2l - maternal")
+dev.off()
+png("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/examples_countingWindows_meternal_mos.png")
+ggplot(mos_melt,aes(x=as.numeric(as.character(variable)),y=value)) + geom_point() + ggtitle(label = "mos - maternal")
+dev.off()
+
+### zygotic
+
+
+vent = tcConversionRate_backgroundRemoved_5cpm_zygotic[which(tcConversionRate_backgroundRemoved_5cpm_zygotic$names == "vent"),][1:6]
+vox = tcConversionRate_backgroundRemoved_5cpm_zygotic[which(tcConversionRate_backgroundRemoved_5cpm_zygotic$names == "vox"),][1:6]
+
+vent_melt = melt(vent)
+
+png("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/examples_countingWindows_zygotic_vent.png")
+ggplot(vent_melt,aes(x=as.numeric(as.character(variable)),y=value)) + geom_point() + ggtitle(label = "vent - zygotic")
+dev.off()
+
+
+vox_melt = melt(vox) 
+png("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/examples_countingWindows_zygotic_vox.png")
+ggplot(vox_melt,aes(x=as.numeric(as.character(variable)),y=value)) + geom_point() + ggtitle(label = "vox - zygotic")
+dev.off()
+
+tcConversionRate_backgroundRemoved_5cpm_maternal[order(tcConversionRate_backgroundRemoved_5cpm_maternal$foldChange,decreasing = T),]
+
+
+### maternal + zygotic 
+
+maternalPlusZygotic_subset = tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic[which(tcConversionRate_backgroundRemoved_5cpm_maternalPlusZygotic$foldChange<1.02),]
+
+znf292b = maternalPlusZygotic_subset[which(maternalPlusZygotic_subset$names == "znf292b"),][1:6]
+znf292b_melt = melt(znf292b)
+ggplot(znf292b_melt,aes(x=as.numeric(as.character(variable)),y=value)) + geom_point() + ggtitle(label = "znf292b - maternal+zygotic")
+
+png("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/examples_countingWindows_Maternalzygotic_znf292b.png")
+ggplot(znf292b_melt,aes(x=as.numeric(as.character(variable)),y=value)) + geom_point() + ggtitle(label = "znf292b - maternal+zygotic")
+dev.off()
+```

@@ -1,19 +1,19 @@
----
-title: ""
-author: "Pooja Bhat"
-date: "January 21, 2017"
-output: html_document
----
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
+
+
+
+
+
+
+
+
 
 ###### this script gets the most distal end per gene. 
 ### as in input we use all transcript ends from refSeq and ensembl. 
 
 
-```{r}
+
 
 library(reshape)
 library(checkmate)
@@ -66,22 +66,22 @@ head(allTransGRReducedDF)
 allTransGRReducedDFBed <- cbind(allTransGRReducedDF[,c(1,2,3)], sub(",.*", "", rownames(allTransGRReducedDF)), 0, allTransGRReducedDF$strand, rownames(allTransGRReducedDF))
 
 
-```
+
 
 ### in this step, we get the most distal 3' end per gene. 
 
-```{r gettingMostDistalTranscriptPerGene}
+
 
 
 write.table(allTransGRReducedDFBed,paste0(OutPath, "/toExtend_longestEnsembl_refSeq_n100.txt"),quote = F,sep="\t",row.names = F,col.names = F)
 write.table(allTransGRReducedDFBed,paste0(OutPath, "/toExtend_longestEnsembl_refSeq_n100.bed"),quote = F,sep="\t",row.names = F,col.names = F)
 
 
-```
+
 
 # creating a combination of gene annotations from ensembl and refSeq 
 
-```{r}
+
 
 ############ THE REFSEQ TRANSCRIPT ANNOTATION COULD BE PROCESSED IN THE ANNOTATION SCRIPT i.e  downloading. 
 
@@ -135,4 +135,4 @@ refSeqExon = refSeqExon[,c(1:6)]
 
 
 
-```
+

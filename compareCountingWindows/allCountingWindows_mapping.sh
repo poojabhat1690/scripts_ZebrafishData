@@ -26,13 +26,12 @@ ml cutadapt
 mkdir -p /clustertmp/pooja/mapping_dr10_12052017/adapterTrimmed/
 OUTDIR=/clustertmp/pooja/mapping_dr10_12052017/adapterTrimmed/
 
-#cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG -o "$OUTDIR"/"$index"_adapterTrimmed.fastq -m 18 --trim-n //groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10_data/quantseq/allData/quantseq/"$index"
+cutadapt -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG -o "$OUTDIR"/"$index"_adapterTrimmed.fastq -m 18 --trim-n //groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10_data/quantseq/allData/quantseq/"$index"
 
 
+ml purge
 
 module load python
-pip install --user IntervalTree
-module load joblib
 module load pysam
 module load R/3.2.2
 module load samtools/1.3.1

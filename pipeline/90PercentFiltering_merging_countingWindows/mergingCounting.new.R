@@ -3,7 +3,7 @@
 library(checkmate)
 library(dplyr)
 #### counting windows for half life calculations
-BOut="//clustertmp/bioinfo/pooja/SLAMannotation/dr/output/"
+#BOut="//clustertmp/bioinfo/pooja/SLAMannotation/dr/output/"
 annotation_custom = read.table(paste0(BOut, "/final90percent/ends_greater90percent_intergenic_n100.txt"),stringsAsFactors = F,sep="\t",header = T)
 
 assertDataFrame(annotation_custom,ncols=11)

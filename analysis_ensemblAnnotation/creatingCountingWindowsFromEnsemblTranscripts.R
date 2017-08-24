@@ -8,7 +8,7 @@ ensemblTranscriptAnnotation = ensemblTranscriptAnnotation %>% mutate(end_Countin
 
 
 
-ensemblTranscriptAnnotation = ensemblTranscriptAnnotation[,c("chromosome_name","start_countingWindows","end_CountingWindow","external_gene_name","score","strand","ensembl_gene_id","ensembl_transcript_id")]
+ensemblTranscriptAnnotation = ensemblTranscriptAnnotation[,c("chromosome_name","start_countingWindows","end_CountingWindow","ensembl_transcript_id","score","strand","ensembl_gene_id","external_gene_name")]
 
 ### converting to 1 based notation 
 
