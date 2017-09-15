@@ -62,4 +62,5 @@ mkdir  /clustertmp/pooja/mashimaTomariData/count/
 featureCounts -T 15 -B  -p -g gene_id -a  /groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10/GTFfiles/Danio_rerio.GRCz10.89.gtf -o /clustertmp/pooja/mashimaTomariData/count/countsRNAseq_mashimaTomari.txt   /clustertmp/pooja/mashimaTomariData/map//*.bam
 
 
+cp /clustertmp/pooja/mashimaTomariData/count/countsRNAseq_mashimaTomari.txt /groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/countsRNAseq_mashimaTomari.txt
 
