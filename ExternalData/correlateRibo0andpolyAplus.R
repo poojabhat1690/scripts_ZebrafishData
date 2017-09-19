@@ -1,51 +1,34 @@
-#### I want to check if the maternal isoforms are influenced by the short polyA tails they have. 
 
-## since QuantSeq is an approach based on oligoDT priming, it could be possible that sequences with short polyA sequences donot get primed well.
-
-
-## to ceck this I want to comapre the expression of QUantSeq to riobo0 RNAseq. 
-
-  ## the first data set i used for this was wild type samples from thw paper of mishimaAndTomari 2016. 
-
-
-  #### first I  want to do a gene specific counting based on RNA seq data : 
+#### reading in the gene counts that Thomas has created at some time from Andi. She has performed polyA+ RNAseq and Ribo0 seq from the same smaples. 
+#### I will use this for the comparison....
+#t1 = 4-cell embryos (~1 hour post fertilization (hpf))
+#t2 = 64-128 cell (~2.5 hpf)
+#t3 = 256-512 cell (~3.5 hpf)
+#t4 = oblong/sphere (~4.5 hpf)
 
 
-### loading edge R to caluclate RPM data : 
 
-source("https://bioconductor.org/biocLite.R")
-biocLite("edgeR")
+polyAAndRibo0 = read.table("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/fromAndi_ribo0VsPolyA/tpm_genes.txt",header=T)
 
-
-library(edgeR)
-
-### reading in RNAseq data from polyA+ RNA (from andi) and Ribo0 rnaSeq (from Mashima Tomari)
-
-counts_polyAplus = read.table("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/rnaSeqReads_featureCounts_strandSpecific_allGenes.txt",header=T,stringsAsFactors = F)
-counts_ribozero = read.table("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/countsRNAseq_mashimaTomari.txt",header = T,stringsAsFactors = F)
-
-sampleInfo_mashima = read.table("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/externalDataResources/mashimaTomari/sampleInfo_emblEbi.txt",sep="\t",header=T)
-countMatrices_polyAplus = counts_polyAplus[,7:ncol(counts_polyAplus)]
-countMatrices_riboZero = counts_ribozero[,7:ncol(counts_ribozero)]
-
-colnames(countMatrices_polyAplus) = c("1KCell_1","2.4Cell_1","2.4Cell_2","256Cell_1","28hpf_1","28hpf_2","2dpf_1","2dpf_2","5dpf_1","5dpf_2","Bud_1","Bud_2","Dome_1","Dome_2","1Kcell_2","Oblong","Shield_1","Shield_2","Shield_3","oocyte_1_5","oocyte_1_6","oocyte_1_7","oocyte_2_5", "oocyte_2_6","oocyte_2_7","ovary_1_5","ovary_1_6","ovary_1_7","sperm1_longRNA","sperm2_longRNA","testis_1_5","testis_1_6","testis_1_7","testis_2_5","testis_2_6","testis_2_7")
-colnames(countMatrices_riboZero) = paste(sampleInfo_mashima$sampleDescription[1:10],c(1:10),sep="_")
-
-### subset this to look only at the relavant stages 
-
-#countMatrices_riboZero = countMatrices_riboZero[,1:6]
-colnames(countMatrices_riboZero) = paste("R",colnames(countMatrices_riboZero),sep="_")
-#countMatrices_polyAplus = countMatrices_polyAplus[,c(1:4,11:15)]
-colnames(countMatrices_polyAplus) =paste("P",colnames(countMatrices_polyAplus),sep="_")
-countMatrices_riboZero_rpkm = rpkm(x = countMatrices_riboZero,gene.length =counts_ribozero$Length )
-countMatrices_polyAplus_rpkm = rpkm(x = countMatrices_polyAplus,gene.length = counts_polyAplus$Length)
+sampleNames = strsplit(colnames(polyAAndRibo0),"_",T)
+sampleNames = unlist(lapply(sampleNames,function(x) paste(x[2],x[3],x[4],sep = "_")))
+sampleNames = sampleNames[-1]
+times = rep(c("1hpf","2.5hpf","3.5hpf","4.5hpf"),each=3)
+times = paste(times,sampleNames,sep="_")
+rownames(polyAAndRibo0) = polyAAndRibo0$geneID
+polyAAndRibo0$geneID = NULL
+colnames(polyAAndRibo0) = times
+cor_polyAandRibo0 = cor(polyAAndRibo0)
+corrplot(cor_polyAandRibo0)
 
 
-total_RNAseq = cbind(countMatrices_riboZero_rpkm,countMatrices_polyAplus_rpkm)
-library(corrplot)
-corrplot(cor(total_RNAseq))
+maxTPM = apply(polyAAndRibo0,1,max)
+polyAAndRibo0_5tpm = polyAAndRibo0[which(maxTPM>5),]
+cor_polyAandRibo0 = cor(polyAAndRibo0_5tpm)
+corrplot(cor_polyAandRibo0)
+pairs(polyAAndRibo0_5tpm)
 
-### now I want to correlate this with gene expression from quantSeq data : 
+#### now use quantSeq 
 
 
 countDataSets_quantSeq = list.files(path = "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/analysis_ensemblAnnotation/countMatrices/",pattern = ".tsv")
@@ -56,3 +39,22 @@ names(countDataSets_quantSeq_cpm) = countDataSets_quantSeq
 countDataSets_quantSeq_cpm = lapply(countDataSets_quantSeq_data,function(x) x$ReadsCPM)
 countDataSets_quantSeq_cpm = do.call(cbind.data.frame,countDataSets_quantSeq_cpm)
 countDataSets_quantSeq_cpm$names = countDataSets_quantSeq_data[[1]]$Name
+
+
+a = split( countDataSets_quantSeq_cpm,countDataSets_quantSeq_cpm$names,T )
+a_summed = lapply(a,function(x) colSums(x[1:24]))
+a_summed = do.call(rbind,a_summed)
+a_summed = as.data.frame(a_summed)
+a_summed$ensembl_gene_id = row.names(a_summed)
+
+samplesNames_quantSeq = read.delim("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/sampleInfo.txt",header = F,stringsAsFactors = F)
+colnames(a_summed) = c(samplesNames_quantSeq$V3,"GeneName")
+
+
+polyAAndRibo0$GeneName = row.names(polyAAndRibo0)
+allData = join(polyAAndRibo0,a_summed)
+allData = allData[complete.cases(allData),]
+rownames(allData) = allData$GeneName 
+allData$GeneName = NULL
+allData_corr = cor(allData)
+corrplot(allData_corr)
