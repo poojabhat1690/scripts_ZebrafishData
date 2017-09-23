@@ -167,6 +167,7 @@ colnames(polyAAndRibo0) = times
     countMatrix = countData 
     condition=c("polyA","polyA","polyA","ribo0","ribo0","ribo0")
     type=c("single-read","single-read","single-read","single-read","single-read","single-read")  
+    coldata = cbind.data.frame(condition,type)
     row.names(coldata) = colnames(countMatrix)
     all(rownames(coldata) %in% colnames(countMatrix))
     
@@ -187,9 +188,9 @@ colnames(polyAAndRibo0) = times
   
   
   
-  # condition=c("polyA","polyA","polyA","ribo0","ribo0","ribo0")
-  # type=c("single-read","single-read","single-read","single-read","single-read","single-read")  
-  # coldata = cbind.data.frame(condition,type)
+#   condition=c("polyA","polyA","polyA","ribo0","ribo0","ribo0")
+#   type=c("single-read","single-read","single-read","single-read","single-read","single-read")  
+# coldata = cbind.data.frame(condition,type)
   # row.names(coldata) = colnames(countMatrix[1:6])
   # all(rownames(coldata) %in% colnames(countMatrix))
   # 
@@ -275,8 +276,9 @@ colnames(polyAAndRibo0) = times
   ###### now I have the tail length, first to check this data if there is actually an increase in the polyA tail length through MZT
   onlyPolyAtail = lapply(polyAtailData,function(x) x$Mean.TL)
   onlyPolyAtail_melt = melt(onlyPolyAtail)
-  ggplot(onlyPolyAtail_melt,aes(x=L1,y=value)) + geom_boxplot() + xlab("timepoint") + ylab("polyA tail length (nt)")
-  
+  jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/polyAtailLengths_Subtenley.jpg")
+  ggplot(onlyPolyAtail_melt,aes(x=L1,y=value)) + geom_boxplot() + xlab("timepoint") + ylab("polyA tail length (nt)") 
+  dev.off()
   
   
   join_2hpf_4hpf = join(polyAtailData_meanTailLength$`2hpf`,polyAtailData_meanTailLength$`4hpf`)
