@@ -12,7 +12,7 @@
 
 
 library(checkmate)
-
+library(GenomicRanges)
 ### the input should be info about the peaks that overlap with refSeq and ensembl 
 
 refSeq_total = read.table(paste0(BOut, "/polyAmapping_allTimepoints/n_100_global_a0/refSeq_total.bed"),sep="\t",stringsAsFactors = F)
@@ -43,13 +43,34 @@ total_pas_accepted =  total_pas[which(total_pas$V10<0.36),]
 total_nopas_accepted = total_nopas[which(total_nopas$V10<0.24),]
 
 
+total_pas_notAccetped = total_pas[which(total_pas$V10>=0.36),]
+total_noPas_notAccepted =   total_nopas[which(total_nopas$V10>=0.24),]
+
+allRejected = rbind(total_noPas_notAccepted, total_pas_notAccetped)
+allRejected_granges = makeGRangesFromDataFrame(allRejected,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",strand.field = "V6",starts.in.df.are.0based = T )
+
+
+#### I want to now overlap this with ends from 3pSeq to identify possibly missed ends... 
+
+ulitskyData = read.table("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/3primeEnds_convertedTobed_dr10.bed",sep="\t",stringsAsFactors = F)
+
+ulitskyData_ranges = makeGRangesFromDataFrame(df = ulitskyData,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",strand.field = "V6",starts.in.df.are.0based = T)
 
 
 
+allRejected_granges = makeGRangesFromDataFrame(allRejected,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",strand.field = "V6",starts.in.df.are.0based = T )
 
+allOverlaps_rejection = findOverlaps(allRejected_granges,ulitskyData_ranges)
+
+rejectedAndOverlapping = allRejected[queryHits(allOverlaps_rejection),]
+rejectedAndOverlapping = rejectedAndOverlapping[!duplicated(rejectedAndOverlapping),]
 
 
 allPeaks = rbind(total_pas_accepted, total_nopas_accepted)
+
+### now also including ends that are overlapping compared to the 3pseq data
+
+allPeaks = rbind(allPeaks,rejectedAndOverlapping)
 
 
 peaks_accepted_nonAccepted = rbind(total_pas, total_nopas)
