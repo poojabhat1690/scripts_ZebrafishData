@@ -207,7 +207,9 @@ checkPAS = function(query_threshold)
   
   query_threshold$upstreamSequences = substr(query_threshold$sequences_polyApeaks_120bps,start = 20,stop = 55)
   query_threshold$upstreamSequences = toupper(query_threshold$upstreamSequences)
-  toMatch <- c("TATAAA", "AGTAAA", "AATACA","CATAAA","AATATA","GATAAA","AATGAA","AAGAAA","ACTAAA","AATAGA","AATAAT","AACAAA","ATTACA","ATTATA","AACAAG","AATAAG")
+  #toMatch <- c("TATAAA", "AGTAAA", "AATACA","CATAAA","AATATA","GATAAA","AATGAA","AAGAAA","ACTAAA","AATAGA","AATAAT","AACAAA","ATTACA","ATTATA","AACAAG","AATAAG")
+  # using the motifs identified in ulitsky et al. 2012
+  toMatch = c("TATAAA", "AGTAAA", "TTTAAA", "CATAAA", "AATACA", "AATGAA", "AATATA", "GATAAA", "TGTAAA")
   
   query_AATAAA = filter(query_threshold,grepl("AATAAA",upstreamSequences))
   query_threshold = filter(query_threshold,!grepl("AATAAA",upstreamSequences))
