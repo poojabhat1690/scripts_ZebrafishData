@@ -22,7 +22,8 @@ ends = do.call(c,ends)
 strand = substr(ends_ulitsky$X3P.Tag.cluster.position,start = nchar(ends_ulitsky$X3P.Tag.cluster.position)-1,stop =  nchar(ends_ulitsky$X3P.Tag.cluster.position)-1)
 
 
-totalBed = cbind.data.frame(chrs,start,ends,ends_ulitsky$Category,0,strand)
+totalBed = cbind.data.frame(chrs,as.numeric(start),as.numeric(ends),ends_ulitsky$Category,0,strand)
+totalBed = totalBed[complete.cases(totalBed),]
 colnames(totalBed) = c("V1","start","end","Name","Score","V6")
 #colnames(totalBed) = c("chrom","chromStart","chromEnd","name","score","strand")
 totalBed$Name = paste0("peak",c(1:nrow(totalBed)))
@@ -30,6 +31,8 @@ id = paste0(totalBed$V1,totalBed$start,totalBed$end,totalBed$V6)
 write.table(totalBed,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/3primeEnds_convertedTobed_dr9.bed",sep="\t",row.names = F,quote = F,col.names = F)
 #############################################
 totalBed = read.table("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/3primeEnds_convertedTobed_dr10.bed",sep="\t",stringsAsFactors = F)
+totalBed$id = paste0(totalBed$V1,totalBed$V2,totalBed$V3,totalBed$V6)
+totalBed = totalBed[!duplicated(totalBed$id),]
 ### ends using QuantSeq data : 
 colnames(totalBed) =  c("V1","start","end","name","score","V6")
 library(dplyr)

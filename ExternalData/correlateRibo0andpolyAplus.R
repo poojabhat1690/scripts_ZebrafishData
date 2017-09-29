@@ -15,6 +15,7 @@ library(reshape)
 library(ggplot2)
 library(DESeq2)
 library(biomaRt)
+library(lsr)
 #############################
 
 ## Data details ####
@@ -184,25 +185,7 @@ colnames(polyAAndRibo0) = times
     res05_df = as.data.frame(res05)
     return(res05_df)
   }
-  
-  
-  
-  
-#   condition=c("polyA","polyA","polyA","ribo0","ribo0","ribo0")
-#   type=c("single-read","single-read","single-read","single-read","single-read","single-read")  
-# coldata = cbind.data.frame(condition,type)
-  # row.names(coldata) = colnames(countMatrix[1:6])
-  # all(rownames(coldata) %in% colnames(countMatrix))
-  # 
-  # dds <- DESeqDataSetFromMatrix(countData = countMatrix[,c(1:6)],colData = coldata,design = ~ condition)
-  # 
-  # ### removing low count data  
-  # dds <- dds[ rowSums(counts(dds)) > 1, ]
-  # dds <- DESeq(dds)
-  # res <- results(dds)
-  #   
-  
-  
+
   DeSeq_t1 =  runDeSeq2(countData = countMatrix[,c(1:6)],timePoint = "t1")
   DeSeq_t2 = runDeSeq2(countData = countMatrix[,c(7:12)],timePoint = "t2")
   DeSeq_t3 = runDeSeq2(countData = countMatrix[,c(13:18)],timePoint = "t3")
@@ -319,7 +302,7 @@ colnames(polyAAndRibo0) = times
     fileName = paste0("tailLengthVariabilityDensity_",time_de) 
     
     jpeg(paste0(destination,fileName,".jpg"))
-    p = ggplot(allTailLengths_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + ggtitle(timepoint) 
+    p = ggplot(allTailLengths_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + ggtitle(timepoint) +xlab("tail length (nt)")
     print(p)
     dev.off()
     return(allTailLengths_melt)
@@ -330,7 +313,72 @@ colnames(polyAAndRibo0) = times
   tailDistributions_t3 = plotTailLengths(upDown =t3_upreg_downreg,timepoint = "4hpf",tailDf = join_2hpf_4hpf_6hpf_geneIds,"t3" )
   tailDistributions_t4 = plotTailLengths(upDown =t4_upreg_downreg,timepoint = "4hpf",tailDf = join_2hpf_4hpf_6hpf_geneIds ,"t4")
   
+#####  i want to look at the fold change with respect to the tail lengths.... 
+ 
+  DeSeq_t1_short = cbind.data.frame(DeSeq_t1$log2FoldChange,row.names(DeSeq_t1))
+  colnames(DeSeq_t1_short) = c("log2FoldChange_t1","ensembl_gene_id")
+  DeSeq_t2_short = cbind.data.frame(DeSeq_t2$log2FoldChange,row.names(DeSeq_t2))
+  colnames(DeSeq_t2_short) = c("log2FoldChange_t2","ensembl_gene_id")
+  DeSeq_t3_short = cbind.data.frame(DeSeq_t3$log2FoldChange,row.names(DeSeq_t3))
+  colnames(DeSeq_t3_short) = c("log2FoldChange_t3","ensembl_gene_id")
+  DeSeq_t4_short = cbind.data.frame(DeSeq_t4$log2FoldChange,row.names(DeSeq_t4))
+  colnames(DeSeq_t4_short) = c("log2FoldChange_t4","ensembl_gene_id")
   
+  
+  
+  plotFC_tailLength = function(tailTable,differentiallyExpressedGenes,timepoint,timeData){
+    
+  DeSeq_joint  = join(tailTable,differentiallyExpressedGenes)
+    grepCol = paste0("meanTail_",timepoint)
+    correctCol = which(colnames(DeSeq_joint) == grepCol)
+    finalDf  = cbind.data.frame(DeSeq_joint[,correctCol],DeSeq_joint$ensembl_gene_id,DeSeq_joint$external_gene_name,DeSeq_joint[,6])
+    
+    finalDf = finalDf[complete.cases(finalDf),]
+    colnames(finalDf) = c("polyAtailLength","ensembl_gene_id","external_gene_name","log2FC")
+    finalDf = finalDf[order(finalDf$log2FC),]
+    fileName = paste0("fcVsTailLength",timeData) 
+    destination= "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/"
+    
+    jpeg(paste0(destination,fileName,".jpg"))
+    p = ggplot(data = finalDf,aes(x=polyAtailLength,y=log2FC)) + geom_point()
+    print(p)
+    dev.off()
+    grouppolyAtailLengths = group_by(finalDf, quartile = ntile(polyAtailLength, 20))
+    split_quantile = split(grouppolyAtailLengths,grouppolyAtailLengths$quartile,T)
+    maxTail  =lapply(split_quantile,function(x) max(x$polyAtailLength))
+    minTail = lapply(split_quantile,function(x) min(x$polyAtailLength))
+    max_melt =  melt(maxTail)
+    colnames(max_melt) = c("maxLength","quartile")
+    min_melt = melt(minTail)
+    colnames(min_melt) = c("minLength","quartile")
+    maxMin_melt = cbind(min_melt$minLength,max_melt)
+    colnames(maxMin_melt) = c("minLength","maxLength","quartile")
+    maxMin_melt$minMax = paste(maxMin_melt$minLength,maxMin_melt$maxLength,sep="-")
+    
+    
+    grouppolyAtailLengths = as.data.frame(grouppolyAtailLengths)
+    grouppolyAtailLengths = join(grouppolyAtailLengths,maxMin_melt)
+    
+    fileName = paste0("fcVsTailLength_boxplot",timeData)
+    avgDataPointsPreQuantile = nrow(grouppolyAtailLengths)
+    jpeg(paste0(destination,fileName,".jpg"),height=500,width=1000)
+    p = ggplot(grouppolyAtailLengths,aes(x=minMax,y=log2FC,group=minMax)) + geom_boxplot(outlier.shape=NA)+ xlab(" tail length range") + ylab ("log2(FC)") + ylim(c(-5,5)) + geom_hline(yintercept =0,col="red",size=1,linetype="dashed") 
+    p = p+ ggtitle(paste0("number of genes ( ",timeData," ) = ",avgDataPointsPreQuantile))
+     print(p)
+    dev.off() 
+   return(finalDf)
+    
+ }
+  
+ 
+  ######
+  
+  
+  ####### combine fold changes and tail lengths
+  fcVstailLength_t1 = plotFC_tailLength(tailTable =join_2hpf_4hpf_6hpf_geneIds,differentiallyExpressedGenes = DeSeq_t1_short,timepoint = "2hpf",timeData="t1" )
+  fcVstailLength_t2 = plotFC_tailLength(tailTable =join_2hpf_4hpf_6hpf_geneIds,differentiallyExpressedGenes = DeSeq_t2_short,timepoint = "2hpf" ,timeData =  "t2")
+  fcVstailLength_t3 = plotFC_tailLength(tailTable =join_2hpf_4hpf_6hpf_geneIds,differentiallyExpressedGenes = DeSeq_t3_short,timepoint = "4hpf" ,timeData =  "t3")
+  fcVstailLength_t4 = plotFC_tailLength(tailTable =join_2hpf_4hpf_6hpf_geneIds,differentiallyExpressedGenes = DeSeq_t4_short,timepoint = "4hpf" ,timeData =  "t4")
   
   ### just want to plot this together
   
@@ -364,6 +412,9 @@ downRegulatedInAll = third_intersect
 
 countDataSets_quantSeq = list.files(path = "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/analysis_ensemblAnnotation/countMatrices/",pattern = ".tsv")
 countDataSets_quantSeq_paths = paste0( "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/analysis_ensemblAnnotation/countMatrices/",countDataSets_quantSeq)
+
+
+
 countDataSets_quantSeq_data = lapply(countDataSets_quantSeq_paths,function(x) read.table(x,sep="\t",header=T))
 names(countDataSets_quantSeq_data) = countDataSets_quantSeq
 
@@ -451,13 +502,205 @@ dev.off()
 ### choose 3 common time points to the 3 datasets - 2.5hpf, 3.5hpf, 4.5 hpf
 
 pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/scatterplots_quantSeq_ribo0_polyA.pdf")
-plot(log2(allData_together$`2.5hpf_mean_polyA`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10))
-plot(log2(allData_together$`3.5_mean_polyA`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10))
-plot(log2(allData_together$`4.5_mean_polyA`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10))
+cor_samples = cor(allData_together$`2.5hpf_mean_polyA`,allData_together$`2.5hpf_quantSeq`)
+plot(log2(allData_together$`2.5hpf_mean_polyA`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
-plot(log2(allData_together$`2.5hpf_mean_riboCop`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10))
-plot(log2(allData_together$`3.5hpf_mean_riboCop`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10))
-plot(log2(allData_together$`4.5hpf_mean_riboCop`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10))
+cor_samples = cor(allData_together$`3.5_mean_polyA`,allData_together$`3.5hpf_quantSeq`)
+plot(log2(allData_together$`3.5_mean_polyA`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`4.5_mean_polyA`,allData_together$`4.5hpf_quantSeq`)
+plot(log2(allData_together$`4.5_mean_polyA`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`2.5hpf_mean_riboCop`,allData_together$`2.5hpf_quantSeq`)
+plot(log2(allData_together$`2.5hpf_mean_riboCop`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`3.5hpf_mean_riboCop`,allData_together$`3.5hpf_quantSeq`)
+plot(log2(allData_together$`3.5hpf_mean_riboCop`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`4.5hpf_mean_riboCop`,allData_together$`4.5hpf_quantSeq`)
+plot(log2(allData_together$`4.5hpf_mean_riboCop`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+dev.off()
+
+
+
+
+
+
+
+### from the above plots it looks like there are several genes that have very low quantSeq experssion but high polyA+ expression 
+
+### checking the identiy of these genes,
+
+allData_together$foldChange_2.5hpf_polyA_quantSeq = allData_together$`2.5hpf_mean_polyA`/allData_together$`2.5hpf_quantSeq`
+allData_together$foldChange_3.5hpf_polyA_quantSeq = allData_together$`3.5_mean_polyA`/allData_together$`3.5hpf_quantSeq`
+allData_together$foldChange_4.5hpf_polyA_quantSeq = allData_together$`4.5_mean_polyA`/allData_together$`4.5hpf_quantSeq`
+
+allData_together$foldChange_2.5hpf_riboCop_quantSeq = allData_together$`2.5hpf_mean_riboCop`/allData_together$`2.5hpf_quantSeq`
+allData_together$foldChange_3.5hpf_riboCop_quantSeq = allData_together$`3.5hpf_mean_riboCop`/allData_together$`3.5hpf_quantSeq`
+allData_together$foldChange_4.5hpf_riboCop_quantSeq = allData_together$`4.5hpf_mean_riboCop`/allData_together$`4.5hpf_quantSeq`
+
+
+### adding the polyA tail length from 2hpf and 4hpf to this dataframe
+
+allData_together$ensembl_transcript_id = row.names(allData_together)
+allData_together = join(allData_together,polyAtailData_meanTailLength$`2hpf`)
+allData_together = join(allData_together,polyAtailData_meanTailLength$`4hpf`)
+
+### looking at the polyA tail lengths of genes that show no expression in quantSeq but show expression in polyA+ and RiboCop, checking at 2.5hpf
+
+### comparing riboCop data at 2.5hrs
+upregulatedQuantSeq_2.5hpf = allData_together[which(allData_together$foldChange_2.5hpf_riboCop_quantSeq>50),]
+upregulatedQuantSeq_2.5hpf = upregulatedQuantSeq_2.5hpf[complete.cases(upregulatedQuantSeq_2.5hpf),]
+
+allData_together_completeMeantail = allData_together[complete.cases(allData_together$meanTail_2hpf),]
+
+upregulatedQuantSeq_2.5hpf_polyA = allData_together[which(allData_together$foldChange_2.5hpf_polyA_quantSeq>50),]
+upregulatedQuantSeq_2.5hpf_polyA = upregulatedQuantSeq_2.5hpf_polyA[complete.cases(upregulatedQuantSeq_2.5hpf_polyA),]
+
+
+tailLengthsUpergulated = upregulatedQuantSeq_2.5hpf$meanTail_2hpf
+tailLengts_all = allData_together_completeMeantail$meanTail_2hpf
+tailLengthsUpergulated_polyA = upregulatedQuantSeq_2.5hpf_polyA$meanTail_2hpf
+
+
+tailLengths_comparisonRiboCop = list(tailLengthsUpergulated,tailLengthsUpergulated_polyA,tailLengts_all)
+
+tailLengths_comparisonRiboCop = lapply(tailLengths_comparisonRiboCop,function(x) x[complete.cases(x)])
+names(tailLengths_comparisonRiboCop) = c("upregulatedRibo0","upregulatedPolyA+","allTails")
+
+tailLengths  = melt(lapply(tailLengths_comparisonRiboCop,length))
+names(tailLengths_comparisonRiboCop) = paste(tailLengths$L1, tailLengths$value,sep="-")
+tailLengths_comparisonRiboCop_melt = melt(tailLengths_comparisonRiboCop)
+
+
+jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/tailLengt_lowQuantSeq.jpg")
+ggplot(tailLengths_comparisonRiboCop_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + xlab("tail length (nt)")
+dev.off()
+
+
+
+########################################################################################################
+
+
+###### doing thwe same above comparison with the revised annotaion
+
+
+#########################################################################################################
+
+
+countDataSets_quantSeq = list.files(path = "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/annotation_including3pSeq//",pattern = ".tsv")
+countDataSets_quantSeq_paths = paste0( "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/annotation_including3pSeq/",countDataSets_quantSeq)
+
+
+
+
+
+
+countDataSets_quantSeq_data = lapply(countDataSets_quantSeq_paths,function(x) read.table(x,sep="\t",header=T))
+names(countDataSets_quantSeq_data) = countDataSets_quantSeq
+
+countDataSets_quantSeq_cpm = lapply(countDataSets_quantSeq_data,function(x) x$ReadsCPM)
+countDataSets_quantSeq_cpm = do.call(cbind.data.frame,countDataSets_quantSeq_cpm)
+countDataSets_quantSeq_cpm$names = countDataSets_quantSeq_data[[1]]$Name
+
+#names(countDataSets_quantSeq_cpm) = countDataSets_quantSeq
+a = split( countDataSets_quantSeq_cpm,countDataSets_quantSeq_cpm$names,T )
+a_summed = lapply(a,function(x) colSums(x[1:24]))
+a_summed = do.call(rbind,a_summed)
+a_summed = as.data.frame(a_summed)
+a_summed$ensembl_gene_id = row.names(a_summed)
+
+samplesNames_quantSeq = read.delim("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/sampleInfo.txt",header = F,stringsAsFactors = F)
+colnames(a_summed) = c(samplesNames_quantSeq$V3,"GeneName")
+a_summed$GeneName = NULL
+
+jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/correlation_onlyQuantSeq_customAnnotation_3pSeq.jpeg")
+corrplot(cor(a_summed))
+dev.off()
+
+
+########## now I want to check how the polyA+ samples relate to the quantSeq samples : 
+### cleaning up the columns (I dont want to have random samples)
+
+
+relavantQuantSeq  = a_summed[,c("2cell","128_con" , "30min_con", "256cell",    "65min_con","sphere","140min_con","170min_con")]
+### 2 cell = 0.5 hr
+### 256 cell - 3.5 hr
+### sphere - 4.5 hr
+### dome - 6.5 hrs??
+
+colnames(relavantQuantSeq) = c("0.5hpf",   "2.5hpf", "3.5hpf",    "3.5hpf" ,"4hpf","4.5hpf","5hpf","6hpf")
+colnames(relavantQuantSeq) = paste0(colnames(relavantQuantSeq),"_quantSeq")
+
+# geneNames_ensembl_gene_id = getBM(attributes = c("external_gene_name","ensembl_gene_id"),filters = "external_gene_name",values = row.names(relavantQuantSeq),mart = ensembl)
+# relavantQuantSeq$external _gene_name = row.names(relavantQuantSeq)
+# 
+# relavantQuantSeq = join(relavantQuantSeq,geneNames_ensembl_gene_id)
+# relavantQuantSeq = relavantQuantSeq[complete.cases(relavantQuantSeq),]
+# row.names(relavantQuantSeq) = relavantQuantSeq$ensembl_gene_id
+
+### get the mean of time points of polyA + and riboCop data 
+
+###### not considering the two outlier smaples in calculating the means 
+
+t1_mean_polyA = (polyAAndRibo0_5TPM$`4cell_t1_polyA_49979`+polyAAndRibo0_5TPM$`4cell_t1_polyA_49987`)/2
+t2_mean_polyA =( polyAAndRibo0_5TPM$`64-128cell_t2_polyA_49980`+polyAAndRibo0_5TPM$`64-128cell_t2_polyA_49984`+polyAAndRibo0_5TPM$`64-128cell_t2_polyA_49988`  )/3
+t3_mean_polyA = (polyAAndRibo0_5TPM$`256-512cell_t3_polyA_49981`+polyAAndRibo0_5TPM$`256-512cell_t3_polyA_49985`+polyAAndRibo0_5TPM$`256-512cell_t3_polyA_49989`)/3
+t4_mean_polyA = (polyAAndRibo0_5TPM$`oblong/sphere_t4_polyA_49982`+polyAAndRibo0_5TPM$`oblong/sphere_t4_polyA_49986`+polyAAndRibo0_5TPM$`oblong/sphere_t4_polyA_49990`)/3
+
+
+
+t1_mean_riboCop = (polyAAndRibo0_5TPM$`4cell_t1_RiboCop_50007`+polyAAndRibo0_5TPM$`4cell_t1_RiboCop_50015`)/2
+t2_mean_riboCop = (polyAAndRibo0_5TPM$`64-128cell_t2_RiboCop_50008`+polyAAndRibo0_5TPM$`64-128cell_t2_RiboCop_50012`+polyAAndRibo0_5TPM$`4cell_t1_RiboCop_50015`)/3
+t3_mean_riboCop = (polyAAndRibo0_5TPM$`256-512cell_t3_RiboCop_50009`+polyAAndRibo0_5TPM$`256-512cell_t3_RiboCop_50013`+polyAAndRibo0_5TPM$`256-512cell_t3_RiboCop_50017`)/3
+t4_mean_riboCop = (polyAAndRibo0_5TPM$`oblong/sphere_t4_RiboCop_50010`+polyAAndRibo0_5TPM$`oblong/sphere_t4_RiboCop_50014` + polyAAndRibo0_5TPM$`oblong/sphere_t4_RiboCop_50018`)/3
+
+polyA_ribo0_mean  = cbind.data.frame(t1_mean_polyA,t2_mean_polyA,t3_mean_polyA,t4_mean_polyA,t1_mean_riboCop,t2_mean_riboCop,t3_mean_riboCop,t4_mean_riboCop)
+
+colnames(polyA_ribo0_mean) = c("1hpf_mean_polyA","2.5hpf_mean_polyA","3.5_mean_polyA","4.5_mean_polyA","1hpf_mean_riboCop","2.5hpf_mean_riboCop","3.5hpf_mean_riboCop","4.5hpf_mean_riboCop")
+polyA_ribo0_mean$geneName = row.names(polyAAndRibo0_5TPM)
+relavantQuantSeq$geneName = row.names(relavantQuantSeq)
+
+allData_together = join(polyA_ribo0_mean,relavantQuantSeq)
+
+allData_together = allData_together[complete.cases(allData_together),]
+
+row.names(allData_together)  = allData_together$geneName
+allData_together$geneName = NULL
+
+jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/correlation_quantSeq_polyASeq_riboSeq_customAnnotation_3pSeq.jpg")
+corrplot(cor(allData_together))
+dev.off()
+
+jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/correlation_quantSeq_polyASeq_riboSeq_spearman_customAnnotation_3pSeq.jpg")
+corrplot(cor(allData_together,method = "spearman"))
+dev.off()
+
+#### the pearson correlation of quantSeq data with polyA+ rnaseq is better than that of quantSeq with RiboCop. 
+
+### I exoect quantSeq to correlate very well with polyA +, but the correlation is not great, maybe scatter plots will show this? 
+
+### choose 3 common time points to the 3 datasets - 2.5hpf, 3.5hpf, 4.5 hpf
+
+pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/scatterplots_quantSeq_ribo0_polyA_customAnnotation_3pSeq.pdf")
+cor_samples = cor(allData_together$`2.5hpf_mean_polyA`,allData_together$`2.5hpf_quantSeq`)
+plot(log2(allData_together$`2.5hpf_mean_polyA`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`3.5_mean_polyA`,allData_together$`3.5hpf_quantSeq`)
+plot(log2(allData_together$`3.5_mean_polyA`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`4.5_mean_polyA`,allData_together$`4.5hpf_quantSeq`)
+plot(log2(allData_together$`4.5_mean_polyA`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`2.5hpf_mean_riboCop`,allData_together$`2.5hpf_quantSeq`)
+plot(log2(allData_together$`2.5hpf_mean_riboCop`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`3.5hpf_mean_riboCop`,allData_together$`3.5hpf_quantSeq`)
+plot(log2(allData_together$`3.5hpf_mean_riboCop`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+
+cor_samples = cor(allData_together$`4.5hpf_mean_riboCop`,allData_together$`4.5hpf_quantSeq`)
+plot(log2(allData_together$`4.5hpf_mean_riboCop`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 dev.off()
 
@@ -472,19 +715,49 @@ allData_together$foldChange_2.5hpf_polyA_quantSeq = allData_together$`2.5hpf_mea
 allData_together$foldChange_3.5hpf_polyA_quantSeq = allData_together$`3.5_mean_polyA`/allData_together$`3.5hpf_quantSeq`
 allData_together$foldChange_4.5hpf_polyA_quantSeq = allData_together$`4.5_mean_polyA`/allData_together$`4.5hpf_quantSeq`
 
-## this could be due to incomplete bad annotation that does not allow quantSeq estimation correctly. (check screenshots). 
+allData_together$foldChange_2.5hpf_riboCop_quantSeq = allData_together$`2.5hpf_mean_riboCop`/allData_together$`2.5hpf_quantSeq`
+allData_together$foldChange_3.5hpf_riboCop_quantSeq = allData_together$`3.5hpf_mean_riboCop`/allData_together$`3.5hpf_quantSeq`
+allData_together$foldChange_4.5hpf_riboCop_quantSeq = allData_together$`4.5hpf_mean_riboCop`/allData_together$`4.5hpf_quantSeq`
 
-# allCombinations = expand.grid(c(1:ncol(averageOfTimepoints_5tpm)),c(1:ncol(averageOfTimepoints_5tpm)))
-# pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/externalDataComparison/scatterplots_roboZeroVsPolyAplur.pdf")
-# for(i in 1:nrow(allCombinations)){
-#   rowGet = allCombinations[i,1]
-#   colGet = allCombinations[i,2]
-#   cor_two = round(cor(averageOfTimepoints_5tpm[,rowGet],averageOfTimepoints_5tpm[,colGet],method = "spearman"),2)
-#   plot(log2(averageOfTimepoints_5tpm[,rowGet]),log2(averageOfTimepoints_5tpm[,colGet]),xlab = colnames(averageOfTimepoints_5tpm)[rowGet],ylab=colnames(averageOfTimepoints_5tpm)[colGet],main=cor_two)
-#   
-# }
-# dev.off()
-# 
-# 
-### check fold changes of t1_polyA vs t1_ribo0
+
+### adding the polyA tail length from 2hpf and 4hpf to this dataframe
+
+allData_together$ensembl_transcript_id = row.names(allData_together)
+allData_together = join(allData_together,polyAtailData_meanTailLength$`2hpf`)
+allData_together = join(allData_together,polyAtailData_meanTailLength$`4hpf`)
+
+### looking at the polyA tail lengths of genes that show no expression in quantSeq but show expression in polyA+ and RiboCop, checking at 2.5hpf
+
+### comparing riboCop data at 2.5hrs
+upregulatedQuantSeq_2.5hpf = allData_together[which(allData_together$`2.5hpf_mean_riboCop`>5 & allData_together$`2.5hpf_quantSeq`< 1 ),]
+plot(log2(upregulatedQuantSeq_2.5hpf$`2.5hpf_mean_riboCop`),log2(upregulatedQuantSeq_2.5hpf$`2.5hpf_quantSeq`))
+upregulatedQuantSeq_2.5hpf = upregulatedQuantSeq_2.5hpf[complete.cases(upregulatedQuantSeq_2.5hpf),]
+allData_together_completeMeantail = allData_together[complete.cases(allData_together$meanTail_2hpf),]
+
+upregulatedQuantSeq_2.5hpf_polyA = allData_together[which(allData_together$`2.5hpf_mean_polyA`>5 & allData_together$`2.5hpf_quantSeq`< 1  ),]
+upregulatedQuantSeq_2.5hpf_polyA = upregulatedQuantSeq_2.5hpf_polyA[complete.cases(upregulatedQuantSeq_2.5hpf_polyA),]
+
+
+tailLengthsUpergulated = upregulatedQuantSeq_2.5hpf$meanTail_2hpf
+
+tailLengthsUpergulated_polyA = upregulatedQuantSeq_2.5hpf_polyA$meanTail_2hpf
+
+
+tailLengths_comparisonRiboCop = list(tailLengthsUpergulated,tailLengthsUpergulated_polyA,tailLengts_all)
+
+
+tailLengths_comparisonRiboCop = lapply(tailLengths_comparisonRiboCop,function(x) x[complete.cases(x)])
+names(tailLengths_comparisonRiboCop) = c("upregulatedRibo0","upregulatedPolyA+","allTails")
+
+tailLengths  = melt(lapply(tailLengths_comparisonRiboCop,length))
+names(tailLengths_comparisonRiboCop) = paste(tailLengths$L1, tailLengths$value,sep="-")
+tailLengths_comparisonRiboCop_melt = melt(tailLengths_comparisonRiboCop)
+
+jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/tailLengt_lowQuantSeq_lessthan1rpm.jpg")
+ggplot(tailLengths_comparisonRiboCop_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + xlab("tail length (nt)")
+dev.off()
+
+
+
+
 
