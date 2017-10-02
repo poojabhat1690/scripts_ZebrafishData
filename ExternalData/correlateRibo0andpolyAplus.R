@@ -16,6 +16,9 @@ library(ggplot2)
 library(DESeq2)
 library(biomaRt)
 library(lsr)
+library(dplyr)
+library(LSD)
+library(VennDiagram)
 #############################
 
 ## Data details ####
@@ -363,7 +366,7 @@ colnames(polyAAndRibo0) = times
     avgDataPointsPreQuantile = nrow(grouppolyAtailLengths)
     jpeg(paste0(destination,fileName,".jpg"),height=500,width=1000)
     p = ggplot(grouppolyAtailLengths,aes(x=minMax,y=log2FC,group=minMax)) + geom_boxplot(outlier.shape=NA)+ xlab(" tail length range") + ylab ("log2(FC)") + ylim(c(-5,5)) + geom_hline(yintercept =0,col="red",size=1,linetype="dashed") 
-    p = p+ ggtitle(paste0("number of genes ( ",timeData," ) = ",avgDataPointsPreQuantile))
+    p = p+ ggtitle(paste0("number of genes ( ",timeData," ) = ",avgDataPointsPreQuantile))+ theme(axis.text.x = element_text(angle = 90, hjust = 1,size = 15),axis.text.y = element_text(size=15))
      print(p)
     dev.off() 
    return(finalDf)
@@ -503,22 +506,22 @@ dev.off()
 
 pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/scatterplots_quantSeq_ribo0_polyA.pdf")
 cor_samples = cor(allData_together$`2.5hpf_mean_polyA`,allData_together$`2.5hpf_quantSeq`)
-plot(log2(allData_together$`2.5hpf_mean_polyA`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`2.5hpf_mean_polyA`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`3.5_mean_polyA`,allData_together$`3.5hpf_quantSeq`)
-plot(log2(allData_together$`3.5_mean_polyA`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`3.5_mean_polyA`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`4.5_mean_polyA`,allData_together$`4.5hpf_quantSeq`)
-plot(log2(allData_together$`4.5_mean_polyA`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`4.5_mean_polyA`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`2.5hpf_mean_riboCop`,allData_together$`2.5hpf_quantSeq`)
-plot(log2(allData_together$`2.5hpf_mean_riboCop`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`2.5hpf_mean_riboCop`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`3.5hpf_mean_riboCop`,allData_together$`3.5hpf_quantSeq`)
-plot(log2(allData_together$`3.5hpf_mean_riboCop`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`3.5hpf_mean_riboCop`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`4.5hpf_mean_riboCop`,allData_together$`4.5hpf_quantSeq`)
-plot(log2(allData_together$`4.5hpf_mean_riboCop`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`4.5hpf_mean_riboCop`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 dev.off()
 
@@ -575,9 +578,118 @@ tailLengths_comparisonRiboCop_melt = melt(tailLengths_comparisonRiboCop)
 
 
 jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/tailLengt_lowQuantSeq.jpg")
-ggplot(tailLengths_comparisonRiboCop_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + xlab("tail length (nt)")
+ggplot(tailLengths_comparisonRiboCop_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + xlab("tail length (nt)")+ theme(axis.text.x = element_text(size=15),axis.text.y = element_text(size=15))
 dev.off()
 
+
+### plotting the log2fold change and polyA tail lengths (boxplots to define range of polyA tail length)
+divideQuantiles = function(quantSeqcomparison){
+  
+  grouppolyAtailLengths = group_by(quantSeqcomparison, quartile = ntile(tailLength, 20))
+  split_quantile = split(grouppolyAtailLengths,grouppolyAtailLengths$quartile,T)
+  maxTail  =lapply(split_quantile,function(x) max(x$tailLength))
+  minTail = lapply(split_quantile,function(x) min(x$tailLength))
+  
+  max_melt =  melt(maxTail)
+  colnames(max_melt) = c("maxLength","quartile")
+  min_melt = melt(minTail)
+  colnames(min_melt) = c("minLength","quartile")
+  maxMin_melt = cbind(min_melt$minLength,max_melt)
+  colnames(maxMin_melt) = c("minLength","maxLength","quartile")
+  maxMin_melt$minMax = paste(maxMin_melt$minLength,maxMin_melt$maxLength,sep="-")
+  
+  
+  grouppolyAtailLengths = as.data.frame(grouppolyAtailLengths)
+  grouppolyAtailLengths = join(grouppolyAtailLengths,maxMin_melt)
+  
+  
+ 
+  
+  return(grouppolyAtailLengths)
+}
+
+
+plotFCvsTailLength = function(allData_together,timePoint_quantSeq,timepoint_tailLength){
+  polyA_quantSeq_colName = paste0("foldChange_",timePoint_quantSeq,"hpf_polyA_quantSeq")
+  riboZero_quantSeq_colName = paste0("foldChange_",timePoint_quantSeq,"hpf_riboCop_quantSeq")
+  polyAQuantSeq = allData_together[,which(colnames(allData_together)== polyA_quantSeq_colName)]
+  Ribo0QuantSeq = allData_together[,which(colnames(allData_together)== riboZero_quantSeq_colName)]  
+  tailLength = paste0("meanTail_",2,"hpf")
+  tailLength_column = allData_together[,which(colnames(allData_together)==tailLength)]
+  data_polyAQuantSeq_riboZeroQuantSeq = cbind.data.frame(polyAQuantSeq,Ribo0QuantSeq,tailLength_column)
+  colnames(data_polyAQuantSeq_riboZeroQuantSeq) = c("FC_polyA_quantSeq","FC_ribo0_quantSeq","tailLength")
+  
+  ### working only on the polyA quantSeq data
+  
+  polyA_quantSeq = data_polyAQuantSeq_riboZeroQuantSeq[,c(1,3)]
+  polyA_quantSeq = polyA_quantSeq[-which(polyA_quantSeq$FC_polyA_quantSeq ==  "Inf"),]
+  polyA_quantSeq = polyA_quantSeq[complete.cases(polyA_quantSeq),]
+  polyA_quantSeq$log2FC = log2(polyA_quantSeq$FC_polyA_quantSeq)
+  
+  ribo0_quantSeq = data_polyAQuantSeq_riboZeroQuantSeq[,c(2,3)]
+  ribo0_quantSeq = ribo0_quantSeq[-which(ribo0_quantSeq$FC_ribo0_quantSeq ==  "Inf"),]
+  ribo0_quantSeq = ribo0_quantSeq[complete.cases(ribo0_quantSeq),]
+  ribo0_quantSeq$log2FC = log2(ribo0_quantSeq$FC_ribo0_quantSeq)
+  grouppolyAtailLengths_ribo0 = divideQuantiles(ribo0_quantSeq)
+  fileName = paste0("quantSeq_ribo0_",timePoint_quantSeq,".jpg")
+  destination= "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/"
+  
+  jpeg(paste0(destination,fileName),height=500,width=1000)
+  p = ggplot(grouppolyAtailLengths_ribo0,aes(x=minMax,y=log2FC,group=minMax)) + geom_boxplot(outlier.shape=NA)+ xlab(" tail length range") + ylab ("log2(FC)") + ylim(c(-5,5)) + geom_hline(yintercept =0,col="red",size=1,linetype="dashed") 
+  print(p)
+  dev.off()
+ 
+  #### same for quantSeq-polyA+ comparison
+  grouppolyAtailLengths_polyA = divideQuantiles(polyA_quantSeq)
+  fileName = paste0("quantSeq_polyA_",timePoint_quantSeq,".jpg")
+  
+  jpeg(paste0(destination,fileName),height=500,width=1000)
+  p = ggplot(grouppolyAtailLengths_polyA,aes(x=minMax,y=log2FC,group=minMax)) + geom_boxplot(outlier.shape=NA)+ xlab(" tail length range") + ylab ("log2(FC)") + ylim(c(-5,5)) + geom_hline(yintercept =0,col="red",size=1,linetype="dashed") 
+  print(p)
+  dev.off()
+}
+
+plotFCvsTailLength(allData_together = allData_together,timePoint_quantSeq = 2.5,timepoint_tailLength = 2)
+plotFCvsTailLength(allData_together = allData_together,timePoint_quantSeq = 3.5,timepoint_tailLength = 4)
+plotFCvsTailLength(allData_together = allData_together,timePoint_quantSeq = 4.5,timepoint_tailLength = 4)
+
+
+polyATailLengths_fc_2.5hrs = cbind.data.frame(allData_together$foldChange_2.5hpf_polyA_quantSeq,allData_together$foldChange_2.5hpf_riboCop_quantSeq,allData_together$meanTail_2hpf)
+colnames(polyATailLengths_fc_2.5hrs) = c("FC_polyA_quantSeq","FC_ribo0_quantSeq","meanTail_2hrs")
+polyATailLengths_fc_2.5hrs = polyATailLengths_fc_2.5hrs[complete.cases(polyATailLengths_fc_2.5hrs),]
+
+polyA_quantSeq = polyATailLengths_fc_2.5hrs[,c(1,3)]
+polyA_quantSeq = polyA_quantSeq[-which(polyA_quantSeq$FC_polyA_quantSeq ==  "Inf"),]
+polyA_quantSeq$log2FC = log2(polyA_quantSeq$FC_polyA_quantSeq)
+
+ribocop_quantseq = polyATailLengths_fc_2.5hrs[,c(2,3)]
+ribocop_quantseq = ribocop_quantseq[-which(ribocop_quantseq$FC_ribo0_quantSeq ==  "Inf"),]
+ribocop_quantseq$log2FC = log2(ribocop_quantseq$FC_ribo0_quantSeq)
+
+
+
+grouppolyAtailLengths = group_by(polyA_quantSeq, quartile = ntile(meanTail_2hrs, 20))
+split_quantile = split(grouppolyAtailLengths,grouppolyAtailLengths$quartile,T)
+maxTail  =lapply(split_quantile,function(x) max(x$meanTail_2hrs))
+minTail = lapply(split_quantile,function(x) min(x$meanTail_2hrs))
+
+max_melt =  melt(maxTail)
+colnames(max_melt) = c("maxLength","quartile")
+min_melt = melt(minTail)
+colnames(min_melt) = c("minLength","quartile")
+maxMin_melt = cbind(min_melt$minLength,max_melt)
+colnames(maxMin_melt) = c("minLength","maxLength","quartile")
+maxMin_melt$minMax = paste(maxMin_melt$minLength,maxMin_melt$maxLength,sep="-")
+
+
+grouppolyAtailLengths = as.data.frame(grouppolyAtailLengths)
+grouppolyAtailLengths = join(grouppolyAtailLengths,maxMin_melt)
+
+fileName = paste0("fcVsTailLength_boxplot",timeData)
+avgDataPointsPreQuantile = nrow(grouppolyAtailLengths)
+
+p = ggplot(grouppolyAtailLengths,aes(x=minMax,y=log2FC,group=minMax)) + geom_boxplot(outlier.shape=NA)+ xlab(" tail length range") + ylab ("log2(FC)") + ylim(c(-5,5)) + geom_hline(yintercept =0,col="red",size=1,linetype="dashed") 
+print(p)
 
 
 ########################################################################################################
@@ -685,25 +797,34 @@ dev.off()
 
 pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/scatterplots_quantSeq_ribo0_polyA_customAnnotation_3pSeq.pdf")
 cor_samples = cor(allData_together$`2.5hpf_mean_polyA`,allData_together$`2.5hpf_quantSeq`)
-plot(log2(allData_together$`2.5hpf_mean_polyA`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`2.5hpf_mean_polyA`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`3.5_mean_polyA`,allData_together$`3.5hpf_quantSeq`)
-plot(log2(allData_together$`3.5_mean_polyA`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`3.5_mean_polyA`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`4.5_mean_polyA`,allData_together$`4.5hpf_quantSeq`)
-plot(log2(allData_together$`4.5_mean_polyA`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`4.5_mean_polyA`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`2.5hpf_mean_riboCop`,allData_together$`2.5hpf_quantSeq`)
-plot(log2(allData_together$`2.5hpf_mean_riboCop`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`2.5hpf_mean_riboCop`),log2(allData_together$`2.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`3.5hpf_mean_riboCop`,allData_together$`3.5hpf_quantSeq`)
-plot(log2(allData_together$`3.5hpf_mean_riboCop`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`3.5hpf_mean_riboCop`),log2(allData_together$`3.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 cor_samples = cor(allData_together$`4.5hpf_mean_riboCop`,allData_together$`4.5hpf_quantSeq`)
-plot(log2(allData_together$`4.5hpf_mean_riboCop`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
+heatscatter(log2(allData_together$`4.5hpf_mean_riboCop`),log2(allData_together$`4.5hpf_quantSeq`),xlim=c(-5,10),ylim = c(-5,10),main=cor_samples)
 
 dev.off()
 
+
+#### checking for high expressed genes : 
+
+allData_together_minusId = allData_together
+allData_together_minusId$ensembl_transcript_id = NULL
+
+
+
+apply(allData_together[,c(1:8)],1,function(x) max(x))
 
 
 
@@ -754,10 +875,15 @@ names(tailLengths_comparisonRiboCop) = paste(tailLengths$L1, tailLengths$value,s
 tailLengths_comparisonRiboCop_melt = melt(tailLengths_comparisonRiboCop)
 
 jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/tailLengt_lowQuantSeq_lessthan1rpm.jpg")
-ggplot(tailLengths_comparisonRiboCop_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + xlab("tail length (nt)")
+ggplot(tailLengths_comparisonRiboCop_melt,aes(value,group=L1)) + geom_density(aes(col=L1)) + xlab("tail length (nt)")+ theme(axis.text.x = element_text(size=15),axis.text.y = element_text(size=15))
 dev.off()
 
 
+### i want to check the intersection between genes downregulated in quantSeq v/s polyA and quantSeq vs ribo0
 
-
-
+intersectPolyA_ribo0 = intersect(upregulatedQuantSeq_2.5hpf_polyA$ensembl_transcript_id,upregulatedQuantSeq_2.5hpf$ensembl_transcript_id)
+jpeg("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/comparisonOfPolyARiboZeroQuantSeq/intersectionLowQuantSeq_highPolyA_highRibo0.jpg",height=500,width=500)
+grid.newpage()
+draw.pairwise.venn(area1 = length(upregulatedQuantSeq_2.5hpf_polyA$ensembl_transcript_id), area2 = length(upregulatedQuantSeq_2.5hpf$ensembl_transcript_id), cross.area = length(intersectPolyA_ribo0), category = c("upregulated PolyA", 
+                                                                         "upregulated Ribo0"), fill = c("light blue", "pink"))
+dev.off()
