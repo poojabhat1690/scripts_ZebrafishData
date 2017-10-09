@@ -2,11 +2,13 @@
 library(reshape)
 library(ggplot2)
 library(SummarizedExperiment)
+library(topGO)
+library(BSgenome.Drerio.UCSC.danRer10)
 
 sampleInfoPath = read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10_data/quantseq/sampleInfoIndex.txt",sep="\t",header = F,stringsAsFactors = F)
 sampleInfoPath = sampleInfoPath[11:24,]
 sampleInfoPath$countFile = paste0(sampleInfoPath$V1,"_adapterTrimmed_slamdunk_mapped_filtered_tcount.tsv")
-filePaths = file.path("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/count/",sampleInfoPath$countFile)
+filePaths = file.path("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/annotation_including3pSeq/",sampleInfoPath$countFile)
 
 data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
 names(data_counts) = sampleInfoPath$V3
@@ -86,6 +88,7 @@ data_counts_injection_tcConversions = data_counts_injection_tcConversions[index_
 
 max_gene = apply(assay(data_counts_injection_readsCPM),1,max)
 assay(data_counts_injection_readsCPM) = assay(data_counts_injection_readsCPM)/max_gene
+
 ### elbow mehtod to determine the number of clusters
 
 
@@ -95,6 +98,9 @@ nclus = 8
 
 
 set.seed(123)
+
+test_data = cbind.data.frame(assay(data_counts_injection_readsCPM),assay(data_counts_injection_tcConversions))
+
 clusterRPMs = kmeans(assay(data_counts_injection_readsCPM),centers = nclus)
 names_clus = paste0("clus",c(1:nclus))
 diff_clusters= vector("list",nclus)
@@ -249,12 +255,12 @@ dev.off()
 options(scipen = 999)
 
 geneList = cluster_tc$cluster
-names(geneList) = rowRanges(zygoticTranscripts)$Name
+names(geneList) = unique(rowRanges(zygoticTranscripts)$Name)
 allRes= vector("list",8)
 for(i in 1:nclus){
   getGenes = function (allScore) 
   {
-    return(allScore == i)
+    return(unique(allScore == i))
   }
   
   Odata <- new("topGOdata",ontology = "BP", allGenes = geneList, geneSel = getGenes,nodeSize = 5, annot = annFUN.org, mapping = "org.Dr.eg.db",ID = "symbol") 
@@ -302,36 +308,62 @@ names(plot_clusters) = names_clus
 names(diff_clusters) = names_clus
 TcConversion_clusters = vector("list",nclus)
 plot_clusters_tc = vector("list",nclus)
-
+clusters_rpm = vector("list",nclus)
+rpmClusters_melt = vector("list",nclus)
 pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/clusteringTCreads.pdf")
 
 for(i in 1:nclus){
   
-  
+  clusters_rpm[[i]] = data_counts_injection_readsCPM[which(clusterRPMs$cluster==i),]
+  rpmClusters_melt[[i]]= melt(assay(clusters_rpm[[i]]))
+  rpmClusters_melt[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(clusters_rpm[[i]]))
+  rpmClusters_melt[[i]]$category  = paste0("clus",i) 
+  r =  ggplot(rpmClusters_melt[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot(outlier.shape = NA)  + ggtitle(paste0("clus",i," n=",nrow((rpmClusters_melt[[i]]))))+ theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
+  r = r + scale_x_discrete(limits=c(0,30,65,105,140,170)) 
+  print(r)
   
   diff_clusters[[i]] <- data_counts_injection_tcConversions[which(clusterRPMs$cluster==i),]
   plot_clusters[[i]] = melt(assay(diff_clusters[[i]]))
   plot_clusters[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_clusters[[i]]))
   plot_clusters[[i]]$category  = paste0("clus",i) 
   q = ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=X1)) + geom_line(aes(col=X1)) + scale_x_discrete(limits=c(0,30,65,105,140,170)) + theme(legend.position="none")
-  q  = q+ ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
+  q  = q+ ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("T>C conversion rate") + ylim(c(0,0.25))
   print(q)
-  p =  ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot(outlier.shape = NA) + ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
-  p = p + scale_x_discrete(limits=c(0,30,65,105,140,170)) 
+  p =  ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot(outlier.shape = NA) + ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("T>C conversion")
+  p = p + scale_x_discrete(limits=c(0,30,65,105,140,170)) + ylim(c(0,0.01))
   print(p)
  
 }
 dev.off()
 
+#### plottong the mean of the expression 
+
+
+
 ### doind the go term analysis for this : 
 
+diff_clusters_numbers = unlist(lapply(diff_clusters,function(x) nrow(assay(x))))
+names(diff_clusters) = paste(names(diff_clusters),"(n=",diff_clusters_numbers,")")
+mean_clusters = lapply(diff_clusters,function(x) colMeans(assay(x)))
+mean_clusters_melt = melt(mean_clusters)
+mean_clusters_melt$time = c(0,30,65,105,140,170)
 
+meanClusters_rpm = lapply(clusters_rpm,function(x) colMeans(assay(x)))
+meanClusters_rpm_melt = melt(meanClusters_rpm)
+meanClusters_rpm_melt$time =  c(0,30,65,105,140,170)
+
+colMeans(assay(clusters_rpm[[1]]))
+pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/Clusters_TC_meanConversions.pdf")
+ggplot(mean_clusters_melt,aes(x=time,y=value,group=L1,col=L1))+geom_line(size=1) + xlab("time") + ylab("mean T>C conversions")
+q = ggplot(meanClusters_rpm_melt,aes(x=time,y=value,group=L1,col=L1))+geom_line(size=1) + xlab("time") + ylab("normalized mean conversions")
+print(q)
+dev.off()
 ### I want to now do a GO analysis on the different clusters by RPM
 options(scipen = 999)
 
 geneList = clusterRPMs$cluster
 names(geneList) = rowRanges(data_counts_injection_readsCPM)$Name
-allRes= vector("list",8)
+allRes= vector("list",nclus)
 for(i in 1:nclus){
   getGenes = function (allScore) 
   {
@@ -363,5 +395,9 @@ for(i in 1:nclus){
 }
 
 dev.off()
+
+
+### the GO term analysis reveals some interesting patterns of gene activation.
+
 
 
