@@ -52,7 +52,7 @@ allRejected_granges = makeGRangesFromDataFrame(allRejected,keep.extra.columns = 
 
 #### I want to now overlap this with ends from 3pSeq to identify possibly missed ends... 
 
-ulitskyData = read.table("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/3primeEnds_convertedTobed_dr10.bed",sep="\t",stringsAsFactors = F)
+ulitskyData = read.table("//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/3primeEnds_convertedTobed_dr10.bed",sep="\t",stringsAsFactors = F)
 
 ulitskyData_ranges = makeGRangesFromDataFrame(df = ulitskyData,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",strand.field = "V6",starts.in.df.are.0based = T)
 
