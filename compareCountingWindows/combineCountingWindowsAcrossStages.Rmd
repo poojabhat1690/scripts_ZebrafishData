@@ -30,7 +30,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 path_allStages = "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dataFromAndi/for_Pooja/2016_12_QuantSeq_Annotaton/raw_data/"
 stages = c("1dpf","256cell","2cell","2dpf","4dpf","bud","dome","oocyte","sphere","testis")
-completePath = paste0(path_allStages,stages,"/output/final90percent/")
+completePath = paste0(path_allStages,stages,"/output_includingPAS/final90percent/")
 
 ##### comparing high confidence ends from the different stages
 
@@ -46,17 +46,46 @@ countingWindows_allStages$stage = row.names(countingWindows_allStages)
 
 countingWindows_allStages$stage = gsub("\\..*","",countingWindows_allStages$stage)
 rownames(countingWindows_allStages) = NULL
+###
+
+reducedToDf = function(reduced){
+  reduced <- data.frame(seqnames=seqnames(reduced),
+                              starts=start(reduced),
+                              ends=end(reduced),
+                              names=c(names(reduced)),
+                              scores=0,strand = strand(reduced))
+  return(reduced)
+  }
+
+
+### one can also just reduce everything using reduce from genomicRanges
+
+library(GenomicRanges)
+countingWindows_allStages_Granges = makeGRangesFromDataFrame(df =countingWindows_allStages,keep.extra.columns = T,ignore.strand = F,seqnames.field =  "V1",start.field = "V2",end.field = "V3",strand.field = "V6",starts.in.df.are.0based = T)
+
+
+reduceRanges = unlist(reduce(split(countingWindows_allStages_Granges, elementMetadata(countingWindows_allStages_Granges)$V4)))
+start = start(reduceRanges)
+end = end(reduceRanges)
+scores=0
+strand = strand(reduceRanges)
+names_reduceRanges = names(reduceRanges)
+seqnames=seqnames(reduceRanges)
+
+reducedRanges_bed = cbind.data.frame(seqnames,start,end,names_reduceRanges,scores,strand)
+colnames(reducedRanges_bed) = paste0("V",c(1:ncol(reducedRanges_bed)))
+
 
 #### group and collapse 
+# 
+# library(dplyr)
+# countingWindows_allStages$id = paste0(countingWindows_allStages$V1,countingWindows_allStages$V2,countingWindows_allStages$V3,countingWindows_allStages$V4,countingWindows_allStages$V6)
+# countingWindows_allStages = countingWindows_allStages %>% group_by(id) %>%  mutate(stageCombine = paste0(stage, collapse = ";")) 
+# 
+# countingWindows_allStages = countingWindows_allStages[!duplicated(countingWindows_allStages[,c(1:6)]),]
+# #countingWindows_allStages.Granges =  makeGRangesFromDataFrame(df = countingWindows_allStages,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",starts.in.df.are.0based = T,strand.field = "V6")
 
-library(dplyr)
-countingWindows_allStages$id = paste0(countingWindows_allStages$V1,countingWindows_allStages$V2,countingWindows_allStages$V3,countingWindows_allStages$V4,countingWindows_allStages$V6)
-countingWindows_allStages = countingWindows_allStages %>% group_by(id) %>%  mutate(stageCombine = paste0(stage, collapse = ";")) 
-
-countingWindows_allStages = countingWindows_allStages[!duplicated(countingWindows_allStages[,c(1:6)]),]
-#countingWindows_allStages.Granges =  makeGRangesFromDataFrame(df = countingWindows_allStages,keep.extra.columns = T,ignore.strand = F,seqnames.field = "V1",start.field = "V2",end.field = "V3",starts.in.df.are.0based = T,strand.field = "V6")
-
-write.table(countingWindows_allStages,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/allCountingWindows_stagesCombined.bed",sep="\t",quote = F,row.names = F)
+write.table(reducedRanges_bed,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/allCountingWindows_stagesCombined.bed",sep="\t",quote = F,row.names = F,col.names = F)
 
 
 ```
@@ -85,7 +114,7 @@ countingWindows_allStages.Granges.Reduce = as.data.frame(reduce(x = countingWind
 names_create = paste0("gene",c(1:nrow(countingWindows_allStages.Granges.Reduce)))
 countingWindows_allStages.Granges.Reduce_rearrange = cbind.data.frame(countingWindows_allStages.Granges.Reduce$seqnames,countingWindows_allStages.Granges.Reduce$start,countingWindows_allStages.Granges.Reduce$end,names_create,countingWindows_allStages.Granges.Reduce$width,countingWindows_allStages.Granges.Reduce$strand)
 colnames(countingWindows_allStages.Granges.Reduce_rearrange) = paste0("V",c(1:ncol(countingWindows_allStages.Granges.Reduce_rearrange)))
-write.table(countingWindows_allStages.Granges.Reduce_rearrange,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/windowsForMultimapper.bed",sep="\t",row.names = F,col.names = F)
+write.table(countingWindows_allStages.Granges.Reduce_rearrange,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/comparingAnnotationsBetweenStages/windowsForMultimapper.bed",sep="\t",row.names = F,col.names = F,quote=F)
 
 ```
 
