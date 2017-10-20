@@ -10,8 +10,7 @@ library(checkmate)
 sampleInfoPath = read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10_data/quantseq/sampleInfoIndex.txt",sep="\t",header = F,stringsAsFactors = F)
 sampleInfoPath = sampleInfoPath[11:24,]
 sampleInfoPath$countFile = paste0(sampleInfoPath$V1,"_adapterTrimmed_slamdunk_mapped_filtered_tcount.tsv")
-filePaths = file.path("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/annotation_including3pSeq/",sampleInfoPath$countFile)
-
+filePaths = file.path("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/annotation_including3pseq_ensemblCountingWindows_18102017//",sampleInfoPath$countFile)
 data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
 names(data_counts) = sampleInfoPath$V3
 
@@ -25,14 +24,13 @@ data_counts_control = data_counts[grep("con",names(data_counts))]
 RPM_injection = do.call(cbind.data.frame,lapply(data_counts_injection,function(x) x$ReadsCPM))
 names(RPM_injection) = names(data_counts_injection)
 RPM_injection = cbind.data.frame(RPM_injection$`128_4su`,RPM_injection$`30min_4su`,RPM_injection$`65min_4su`,RPM_injection$`105min_4su`,RPM_injection$`140min_4su`,RPM_injection$`170min_4su`)
-colnames(RPM_injection) = c("0min","30min","65min","105min","140min","170min")
+colnames(RPM_injection) = c("2","2.5","3","3.75","4.3","48")
 
 
 tcConversions_injection = do.call(cbind.data.frame,lapply(data_counts_injection,function(x) x$ConversionRate))
 names(tcConversions_injection) = names(data_counts_injection)
 tcConversions_injection = cbind.data.frame(tcConversions_injection$`128_4su`,tcConversions_injection$`30min_4su`,tcConversions_injection$`65min_4su`,tcConversions_injection$`105min_4su` ,tcConversions_injection$`140min_4su`,tcConversions_injection$`170min_4su`)
-colnames(tcConversions_injection) = c("0min","30min","65min","105min","140min","170min")
-
+colnames(tcConversions_injection) =  c("2","2.5","3","3.75","4.3","48")
 
 
 ### get the CPMs and TC counts of control 
@@ -40,14 +38,14 @@ colnames(tcConversions_injection) = c("0min","30min","65min","105min","140min","
 RPM_control = do.call(cbind.data.frame,lapply(data_counts_control,function(x) x$ReadsCPM))
 names(RPM_control) = names(data_counts_control)
 RPM_control = cbind.data.frame(RPM_control$`128_con`,RPM_control$`30min_con`,RPM_control$`65min_con`,RPM_control$`105min_con`,RPM_control$`140min_con`,RPM_control$`170min_con`)
-colnames(RPM_control) = c("0min","30min","65min","105min","140min","170min")
+colnames(RPM_control) =  c("2","2.5","3","3.75","4.3","48")
 
 
 
 tcConversions_control = do.call(cbind.data.frame,lapply(data_counts_control,function(x) x$ConversionRate))
 names(tcConversions_control) = names(data_counts_control)
 tcConversions_control = cbind.data.frame(tcConversions_control$`128_con`,tcConversions_control$`30min_con`,tcConversions_control$`65min_con`,tcConversions_control$`105min_con`,tcConversions_control$`140min_con`,tcConversions_control$`170min_con`)
-colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","170min")
+colnames(tcConversions_control) = c("2","2.5","3","3.75","4.3","48")
 
 #### checking control for injection for : 
     ### the TC conversion rate calcualated - i.e normalized per position
@@ -62,7 +60,7 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
         colnames(meanConversions) = c("injection","control")
         meanConversions = reshape::melt(meanConversions)
         meanConversions$time= timePoints
-        meanConversions$timepoints = c(30,60,105,128,140,170)
+        meanConversions$timepoints = c(2,2.5,3,3.75,4.3,4.8)
 
 
         assertSetEqual(nrow(tcConversions_injection),nrow(tcConversions_control))
@@ -79,14 +77,14 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
         TCconversionRate_complete = lapply(TCconversionRate,function(x) x[complete.cases(x)])
         TCconversionRate_complete_mean = lapply(TCconversionRate_complete,mean)
         TCconversionRate_complete_mean_melt = melt(TCconversionRate_complete_mean)
-        TCconversionRate_complete_mean_melt$L1 = c(0,170,105,65,140,30)
+        TCconversionRate_complete_mean_melt$L1 = c(2,4.8,3.75,3,4.3,2.5)
         TCconversionRate_complete_mean_melt$category = "injection"
         
         TCconversionRate_control = lapply(data_counts_control,function(x) x$ConversionsOnTs/(x$Tcontent * x$ReadCount ))
         TCconversionRate_control_complete = lapply(TCconversionRate_control,function(x) x[complete.cases(x)])
         TCconversionRate_control_complete_mean = lapply(TCconversionRate_control_complete,mean)
         TCconversionRate_control_complete_mean_melt = melt(TCconversionRate_control_complete_mean)
-        TCconversionRate_control_complete_mean_melt$L1 = c(65,30,140,128,170,105)
+        TCconversionRate_control_complete_mean_melt$L1 = c(2,4.8,3.75,3,4.3,2.5)
         TCconversionRate_control_complete_mean_melt$category = "control"
         totalTCconversion = rbind(TCconversionRate_complete_mean_melt,TCconversionRate_control_complete_mean_melt)
 
@@ -137,19 +135,23 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
 
 ## subset based on RPM ..mean RPM > 5
       library(dplyr)      
-      #masterTable_5RPM = masterTable %>% filter(mean_RPM > 1)
-      masterTable_5RPM = masterTable
+
+      rpms = masterTable[ ,grep("_RPM",colnames(masterTable))]
+      rpms =  apply(rpms,1, function(x) length(which(x>5)))
+      masterTable_5RPM = masterTable[which(rpms>1),]
+     # masterTable_5RPM = masterTable %>% filter(mean_RPM > 5)
+      #masterTable_5RPM = masterTable
 ####### now clustering the T>C conversions... 
         ### to do this I have to normalize T>C conversion rates to 1 (i.e max should be 1)
 #######
-      which_tc = masterTable_5RPM[,grep("min_tc",colnames(masterTable_5RPM))]
+      which_tc = masterTable_5RPM[,grep("_tc",colnames(masterTable_5RPM))]
       maxTC = masterTable_5RPM[,"max_tc"]
       tcFraction =  which_tc /maxTC
       colnames(tcFraction) = paste0(colnames(tcFraction),"_fraction")
       masterTable_5RPM = cbind(masterTable_5RPM,tcFraction)  
 
 ### also normalizing the RPM to 1 
-      which_rpm = masterTable_5RPM[,grep("min_RPM",colnames(masterTable_5RPM))]
+      which_rpm = masterTable_5RPM[,grep("_RPM",colnames(masterTable_5RPM))][,c(1:6)]
       max_RPM = apply(which_rpm,1,max)
       rpm_fraction = which_rpm/max_RPM
       colnames(rpm_fraction) =  paste0(colnames(rpm_fraction),"_fraction")
@@ -177,7 +179,7 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
       write.table(noTC,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/clusteringTCreads/noTCconversion.txt",sep="\t",quote = F,row.names = F)
     
       
-    ### i will remove these 155 transcritps from the further analysis "
+    ### i will remove these  transcritps from the further analysis "
   
       
       
@@ -188,11 +190,14 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
       clusterRPMs = kmeans(masterTable_5RPM_TCpresent[,grep("_RPM_fraction",colnames(masterTable_5RPM_TCpresent))],centers = nclus)
       masterTable_5RPM_TCpresent$cluster = clusterRPMs$cluster
       names_clus = paste0("clus",c(1:nclus))
-      diff_clusters= vector("list",nclus)
+     
+      
+       diff_clusters= vector("list",nclus)
       plot_clusters = vector("list",nclus)
       names(plot_clusters) = names_clus
       names(diff_clusters) = names_clus
       TcConversion_clusters = vector("list",nclus)
+      
       plot_clusters_tc = vector("list",nclus)
       
       diff_clusters_TC = vector("list",nclus)
@@ -201,6 +206,13 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
       names(diff_clusters_TC) = names_clus
       TcConversion_clusters_TC = vector("list",nclus)
       
+      diff_clusters_RPM= vector("list",nclus)
+      plot_clusters_RPM = vector("list",nclus)
+      names(plot_clusters_RPM) = names_clus
+      names(plot_clusters_RPM) = names_clus
+      TcConversion_clusters_RPM = vector("list",nclus)
+      
+      
       ### plotting these clusters now: 
       totalPlot = c()
     ### now I can cluster these transcripts based on RPM.. then I can clasify further based on T>C conversions
@@ -208,17 +220,17 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
       pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/clusteringBasedOnQuantSeqReads.pdf")
       for(i in 1:nclus){
         
-        TCfraction = grep("min_tc",colnames(masterTable_5RPM_TCpresent))
+        TCfraction = grep("_tc",colnames(masterTable_5RPM_TCpresent))
         TCfraction = TCfraction[c(1:6)]
         diff_clusters_TC[[i]] <- masterTable_5RPM_TCpresent[which(masterTable_5RPM_TCpresent$cluster==i),]
-        tmp_table = masterTable_5RPM_TCpresent[,grep("min_tc",colnames(masterTable_5RPM_TCpresent))]
+        tmp_table = masterTable_5RPM_TCpresent[,grep("_tc",colnames(masterTable_5RPM_TCpresent))]
         tmp_table = tmp_table[,c(1:6)]
         tmp_table = tmp_table[which(masterTable_5RPM_TCpresent$cluster==i),]
         
         plot_clusters_TC[[i]] = melt(tmp_table)
-        plot_clusters_TC[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_clusters_TC[[i]]))
+        plot_clusters_TC[[i]]$timepoint = rep(c(2,2.5,3,3.75,4.3,4.8),each=nrow(diff_clusters_TC[[i]]))
         plot_clusters_TC[[i]]$category  = paste0("clus",i) 
-        q = ggplot(plot_clusters_TC[[i]],aes(x=timepoint,y=value,group=variable)) + geom_boxplot() + scale_x_discrete(limits=c(0,30,65,105,140,170)) + theme(legend.position="none")
+        q = ggplot(plot_clusters_TC[[i]],aes(x=timepoint,y=value,group=variable)) + geom_boxplot() + scale_x_discrete(limits=c(2,2.5,3,3.75,4.3,4.8)) + theme(legend.position="none")
         q  = q+ ggtitle(paste0("clus",i," n=",nrow(diff_clusters_TC[[i]]))) + theme_bw() + xlab("time in minutes") + ylab(" T>C")
         print(q)
         
@@ -227,11 +239,28 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
         RPMfraction$name = masterTable_5RPM_TCpresent$Name
         diff_clusters[[i]] <- RPMfraction[which(clusterRPMs$cluster==i),]
         plot_clusters[[i]] = melt(diff_clusters[[i]])
-        plot_clusters[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_clusters[[i]]))
+        plot_clusters[[i]]$timepoint = rep(c(2,2.5,3,3.75,4.3,4.8),each=nrow(diff_clusters[[i]]))
         plot_clusters[[i]]$category  = paste0("clus",i) 
-        p = ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=variable)) + geom_boxplot() + scale_x_discrete(limits=c(0,30,65,105,140,170)) + theme(legend.position="none")
+        p = ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=variable)) + geom_boxplot() + scale_x_discrete(limits=c(2,2.5,3,3.75,4.3,4.8)) + theme(legend.position="none")
         p  = p+ ggtitle(paste0("clus",i," n=",nrow(diff_clusters[[i]]))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
         print(p)
+        
+        
+        ### total RPM 
+        
+        RPMfraction = masterTable_5RPM_TCpresent[,grep("_RPM",colnames(masterTable_5RPM_TCpresent))]
+        RPMfraction = RPMfraction[,c(1:6)]
+        RPMfraction$name = masterTable_5RPM_TCpresent$Name
+        diff_clusters_RPM[[i]] <- RPMfraction[which(clusterRPMs$cluster==i),]
+        plot_clusters_RPM[[i]] = melt(diff_clusters_RPM[[i]])
+        plot_clusters_RPM[[i]]$timepoint = rep(c(2,2.5,3,3.75,4.3,4.8),each=nrow(diff_clusters_RPM[[i]]))
+        plot_clusters_RPM[[i]]$category  = paste0("clus",i) 
+        p = ggplot(plot_clusters_RPM[[i]],aes(x=timepoint,y=value,group=variable)) + geom_boxplot() + scale_x_discrete(limits=c(2,2.5,3,3.75,4.3,4.8)) + theme(legend.position="none")
+        p  = p+ ggtitle(paste0("clus",i," n=",nrow(diff_clusters[[i]]))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
+        print(p)
+        
+        
+        
       }
       dev.off()
       
@@ -244,417 +273,275 @@ colnames(tcConversions_control) = c("0min","30min","65min","105min","140min","17
       plot_clusters_TC_melt$type = "TC"
       plot_clusters_RPM_melt = do.call(rbind,plot_clusters)
       plot_clusters_RPM_melt$type = "NormalizedRPM"
+      plot_clusters_RPMTotal_melt = do.call(rbind,plot_clusters_RPM)
+      plot_clusters_RPMTotal_melt$type = "RPM"
+      
       
       
       pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/boxplots_clusteringBasedOnRPM.pdf")
       ggplot(plot_clusters_TC_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylim(c(0,0.02)) + ylab("T>C reads")
       ggplot(plot_clusters_RPM_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylab("normalized RPM")
+      ggplot(plot_clusters_RPMTotal_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylab("RPM")
+      
       dev.off()
       
-      ### clusters 1,3,4,5 look to be maternl + zygotic and cluster 6 looks to be zygotic and cluster 2 to be maternal, but cluster 2 still has some T>C conversions!!! why?
-      diff_clusters_TC[[1]]$categoty = "MZ"  
+      ### plotting only the medians 
+      
+      split_clusters = lapply(plot_clusters_TC,function(x) split(x,x$variable,T))
+      split_clusters_TC = lapply(split_clusters,function(x) lapply(x,function(y) y[,2]))
+      split_clusters_TC = lapply(split_clusters_TC,function(x) lapply(x,function(y) mean(y)))
+      split_clusters_TC_melt = melt(split_clusters_TC)
+      split_clusters_TC_melt$tome =c(2,2.5,3,3.75,4.3,4.8)
+      numberOfentriesPercluster = melt(lapply(plot_clusters_TC,function(x) nrow(x)/6))
+      colnames(numberOfentriesPercluster) = c("value1","L1")
+      library(plyr)
+      split_clusters_TC_melt = join(split_clusters_TC_melt,numberOfentriesPercluster)
+      split_clusters_TC_melt$group = paste(split_clusters_TC_melt$L1,split_clusters_TC_melt$value1,sep="_")
+      
+      pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/meanRPMandTC_clusters.pdf")
+      
+      
+      
+      ggplot(split_clusters_TC_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group),size=1 ) + ylab("Mean T>C conversion rate") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
+      
+      split_clusters = lapply(plot_clusters,function(x) split(x,x$variable,T))
+      split_clusters_rpm = lapply(split_clusters,function(x) lapply(x,function(y) y[,3]))
+      split_clusters_rpm = lapply(split_clusters_rpm,function(x) lapply(x,function(y) mean(y)))
+      split_clusters_rpm_melt = melt(split_clusters_rpm)
+      split_clusters_rpm_melt$tome =c(2,2.5,3,3.75,4.3,4.8)
+      numberOfentriesPercluster = melt(lapply(plot_clusters,function(x) nrow(x)/6))
+      colnames(numberOfentriesPercluster) = c("value1","L1")
+      split_clusters_rpm_melt = join(split_clusters_rpm_melt,numberOfentriesPercluster)
+      split_clusters_rpm_melt$group = paste(split_clusters_rpm_melt$L1,split_clusters_rpm_melt$value1,sep="_")
+      
+      ggplot(split_clusters_rpm_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group) ,size=1) + ylab("Mean normalized RPM") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
+      
+      
+      #### plotting absolute RPM 
+      
+      
+      split_clusters = lapply(plot_clusters_RPM,function(x) split(x,x$variable,T))
+      split_clusters_RPM = lapply(split_clusters,function(x) lapply(x,function(y) y[,3]))
+      split_clusters_RPM = lapply(split_clusters_RPM,function(x) lapply(x,function(y) mean(y)))
+      split_clusters_RPM_melt = melt(split_clusters_RPM)
+      split_clusters_RPM_melt$tome = c(2,2.5,3,3.75,4.3,4.8)
+      numberOfentriesPercluster = melt(lapply(plot_clusters_RPM,function(x) nrow(x)/6))
+      colnames(numberOfentriesPercluster) = c("value1","L1")
+      library(plyr)
+      split_clusters_RPM_melt = join(split_clusters_RPM_melt,numberOfentriesPercluster)
+      split_clusters_RPM_melt$group = paste(split_clusters_RPM_melt$L1,split_clusters_RPM_melt$value1,sep="_")
+      
+      
+      ggplot(split_clusters_RPM_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group) ,size=1) + ylab("Mean normalized RPM") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
+      
+      dev.off()
+      
+      
+            ### clusters 1,3,4,5 look to be maternl + zygotic and cluster 6 looks to be zygotic and cluster 2 to be maternal, but cluster 2 still has some T>C conversions!!! why?
+      diff_clusters_TC[[1]]$categoty = "M"  
       diff_clusters_TC[[3]]$categoty = "MZ"  
       diff_clusters_TC[[4]]$categoty = "MZ"  
-      diff_clusters_TC[[5]]$categoty = "MZ"  
-      diff_clusters_TC[[2]]$categoty = "M"  
-      diff_clusters_TC[[6]]$categoty = "Z"  
+      diff_clusters_TC[[5]]$categoty = "Z"  
+      diff_clusters_TC[[2]]$categoty = "MZ"  
+      diff_clusters_TC[[6]]$categoty = "MZ"  
       
       allData = do.call(rbind,diff_clusters_TC)
       write.table(allData, "/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/clusteringTCreads/categories_slamSeq.txt",sep="\t",quote = F,row.names = F)
-      # pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/boxplots_subclusteringZygoticTranscripts.pdf")
-      # clusters = kmeans(x = diff_clusters_TC[[6]][,c(7:12)],3 )
-      # test_zygoticCluster = diff_clusters_TC[[6]]
-      # test_zygoticCluster$cluster = clusters$cluster
-      # 
-      # a = split(test_zygoticCluster,test_zygoticCluster$cluster,T)
-      # a = lapply(a,function(x) x[,c(7:12)])
-      # a_melt = melt(a)
-      # timepointSplit = strsplit(as.character(a_melt$variable),"min",T)
-      # timepointSplit = unlist(lapply(timepointSplit,function(x) x[1]))
-      # timepointSplit = as.numeric(timepointSplit)
-      # a_melt$timepoint = timepointSplit
-      # ggplot(a_melt,aes(x=timepoint,y=value,group=variable)) + geom_boxplot() + facet_wrap(~L1) 
-      # 
-      # ### checking the RPMs of the same
-      # test_zygoticCluster = diff_clusters[[6]]
-      # test_zygoticCluster$cluster = clusters$cluster
-      # 
-      # a = split(test_zygoticCluster,test_zygoticCluster$cluster,T)
-      # a = lapply(a,function(x) x[,c(1:6)])
-      # a_melt = melt(a)
-      # timepointSplit = strsplit(as.character(a_melt$variable),"min",T)
-      # timepointSplit = unlist(lapply(timepointSplit,function(x) x[1]))
-      # timepointSplit = as.numeric(timepointSplit)
-      # a_melt$timepoint = timepointSplit
-      # ggplot(a_melt,aes(x=timepoint,y=value,group=variable)) + geom_boxplot() + facet_wrap(~L1)
-      # 
-      # dev.off()
-      # 
-      # 
-      
-##### now I want to compare this to Lee et. al 2014 that did this classification based on intron signal
-       
-      leeEtal = read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/externalDatat/zygoticAndMaternalTranscripts_differentStudies/LeeEtAl_2014.txt",sep="\t")
-      table(leeEtal$Maternal_contr)
-      names_zygotic = allData %>% filter(categoty == "Z")
-      intersect(leeEtal$Symbol,names_zygotic$name)
-      setdiff(leeEtal$Symbol,names_zygotic$name)
-   
       
       
       
+      library(factoextra)
+      masterTable_5RPM_a = masterTable_5RPM[,grep("RPM",colnames(masterTable_5RPM))][,c(1:6)]
+      colnames(masterTable_5RPM_a) = c("2","2.5","3","3.75","4.3","4.8")
+      #masterTable_5RPM_a = masterTable_5RPM_a[1:50,]
+      res.pca <- prcomp(masterTable_5RPM_a, scale = TRUE)
+      
+      fviz_eig(res.pca)
+      fviz_pca_ind(res.pca,
+                   col.ind = "cos2", # Color by the quality of representation
+                   gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),geom = c("point"),
+                   repel = TRUE, xlim  = (c(-2,10)),ylim=c(-4,1)   # Avoid text overlapping,
+      )
+      
+      fviz_pca_ind(res.pca,
+                   geom = c("point"),
+                   repel = TRUE, xlim  = (c(-2,10)),ylim=c(-4,1)   # Avoid text overlapping,
+      )
+      
+      
+      fviz_pca_biplot(res.pca, repel = TRUE,
+                      col.var = "#2E9FDF", # Variables color
+                      col.ind = "#696969",
+                      geom = c("point"), xlim  = (c(-2,10)),ylim=c(-4,1) 
+      )
+      
+      eig.val <- get_eigenvalue(res.pca)
+      eig.val
+      
+      res.var <- get_pca_var(res.pca)
+      res.var$coord          # Coordinates
+      res.var$contrib        # Contributions to the PCs
+      res.var$cos2  
+      
+      
+      res.ind <- get_pca_ind(res.pca)
+      res.ind$coord          # Coordinates
+      res.ind$contrib        # Contributions to the PCs
+      res.ind$cos2           # Quality of representation 
+      
+      coordinates = as.data.frame(res.ind$coord)
+      pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/PCAclustering/plottingQuadrants_PCA.pdf")
+      ##### get the T>C conversions based on the coordinates .. 
+      
+      ### quadrant 1
+      
+      a = coordinates[which(coordinates$Dim.1 < -0.5 & coordinates$Dim.2> 0.1),]
+      b = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+      b_tc_melt = melt(b_tc)
+      ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() +ylim(c(0,0.06))+ xlab("time") + ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+      
+      d = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+      d_tc_melt = melt(d_tc)
+      ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
+      
+      
+      ### quadrant 2
+      a = coordinates[which(coordinates$Dim.1 > 0.5 & coordinates$Dim.2> 0.05),]
+      b = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+      b_tc_melt = melt(b_tc)
+      ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() +ylim(c(0,0.06)) + xlab("time") + ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+      
+      d = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+      d_tc_melt = melt(d_tc)
+      ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
       
       
       
       
+      ### quandrant 3
+      
+     
+      a = coordinates[which(coordinates$Dim.1 < -0.5 & coordinates$Dim.2< -0.05),]
+      b = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      
+      
+      
+      ### plott the T>C conversions in this cluster now
+      b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+      b_tc_melt = melt(b_tc)
+      ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() +ylim(c(0,0.06))+ xlab("time") + ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+      
+      d = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      
+      d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+      d_tc_melt = melt(d_tc)
+      ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
       
       
       
       
+
       
       
       
-         
+      ### quadrant 4 
       
-          ##### creating summarized experiments for the RPM and the T>C conversion matrices :
-       
-  
-
-metadata = data_counts_injection[[1]][,c(1:6)]
-metadata$id = paste0(data_counts_injection[[1]]$Chromosome,data_counts_injection[[1]]$Start,data_counts_injection[[1]]$End,data_counts_injection[[1]]$Name,data_counts_injection[[1]]$Strand)
-metadata = makeGRangesFromDataFrame(metadata,keep.extra.columns = T,ignore.strand = F,starts.in.df.are.0based = T,seqnames.field = "Chromosome",start.field = "Start",end.field = "End",strand.field = "Strand")
-
-data_counts_injection_readsCPM  = SummarizedExperiment(assays = as.matrix(RPM_injection),rowData = metadata)
-data_counts_injection_tcConversions  = SummarizedExperiment(assays = tcConversions_injection,rowData = metadata)
-
-index_greaterthan5 = which(apply(assay(data_counts_injection_readsCPM),1,max)>5)
-data_counts_injection_readsCPM = data_counts_injection_readsCPM[index_greaterthan5,]
-data_counts_injection_tcConversions = data_counts_injection_tcConversions[index_greaterthan5,]
-
-
-# test to check overlap  
-# a = as.data.frame(rowRanges(data_counts_injection_readsCPM))
-# b= as.data.frame(rowRanges(data_counts_injection_tcConversions))
-# a$id = paste0(a[,1],a[,2],a[,3],a[,4],a[,5])
-# b$id = paste0(b[,1],b[,2],b[,3],b[,4],b[,5])
-
-#### clustering the expression data : 
-### to do this, i first need to normalize. each gene will be normalised to the time point at which it is namimally exoressed.
-### this will help maintain shape of expression. 
-
-
-max_gene = apply(assay(data_counts_injection_readsCPM),1,max)
-assay(data_counts_injection_readsCPM) = assay(data_counts_injection_readsCPM)/max_gene
-
-### elbow mehtod to determine the number of clusters
-
-
-#### by looking at the plot we can see there are ~ 6 clusters that define the data
-
-nclus = 8
-
-
-set.seed(123)
-
-test_data = cbind.data.frame(assay(data_counts_injection_readsCPM),assay(data_counts_injection_tcConversions))
-
-clusterRPMs = kmeans(assay(data_counts_injection_readsCPM),centers = nclus)
-names_clus = paste0("clus",c(1:nclus))
-diff_clusters= vector("list",nclus)
-plot_clusters = vector("list",nclus)
-names(plot_clusters) = names_clus
-names(diff_clusters) = names_clus
-TcConversion_clusters = vector("list",nclus)
-plot_clusters_tc = vector("list",nclus)
-### plotting these clusters now: 
-totalPlot = c()
-
-pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/clusteringBasedOnQuantSeqReads.pdf")
-set.seed(123)
-k.max = 15
-data = assay(data_counts_injection_readsCPM)
-wss <- sapply(1:k.max, 
-              function(k){kmeans(data, k, nstart=50,iter.max = 1000 ,algorithm="MacQueen")$tot.withinss})
-
-
-plot(1:k.max, wss,
-     type="b", pchw = 19, frame = FALSE, 
-     xlab="Number of clusters K",
-     ylab="Total within-clusters sum of squares")
-for(i in 1:nclus){
-  
-
-  
-  diff_clusters[[i]] <- data_counts_injection_readsCPM[which(clusterRPMs$cluster==i),]
-  plot_clusters[[i]] = melt(assay(diff_clusters[[i]]))
-  plot_clusters[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_clusters[[i]]))
-  plot_clusters[[i]]$category  = paste0("clus",i) 
-  q = ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=X1)) + geom_line(aes(col=X1)) + scale_x_discrete(limits=c(0,30,65,105,140,170)) + theme(legend.position="none")
-  q  = q+ ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
-  print(q)
-  p =  ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot(outlier.shape = NA) + ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
-  p = p + scale_x_discrete(limits=c(0,30,65,105,140,170)) 
-  print(p)
-  #TcConversion_clusters[[i]] = subsetByOverlaps(data_counts_injection_tcConversions,diff_clusters[[i]])
-  TcConversion_clusters[[i]] = data_counts_injection_tcConversions[elementMetadata(data_counts_injection_tcConversions)[,3] %in% elementMetadata(diff_clusters[[i]])[,3]]
-  plot_clusters_tc[[i]] = melt(assay(TcConversion_clusters[[i]]))
-  plot_clusters_tc[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(TcConversion_clusters[[i]]))
-  r =  ggplot(plot_clusters_tc[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot(outlier.shape=NA) + ggtitle(paste0("clus",i," n=",nrow(assay(TcConversion_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("raw TC conversion rate")
-  r = r + scale_x_discrete(limits=c(0,30,65,105,140,170)) + ylim(c(0,0.05))
-  print(r)
-
-  
-    }
-dev.off()
-
-
-### I want to now do a GO analysis on the different clusters by RPM
-options(scipen = 999)
-
-geneList = clusterRPMs$cluster
-names(geneList) = rowRanges(data_counts_injection_readsCPM)$Name
-allRes= vector("list",8)
-for(i in 1:nclus){
-  getGenes = function (allScore) 
-  {
-    return(allScore == i)
-  }
-  
-  Odata <- new("topGOdata",ontology = "BP", allGenes = geneList, geneSel = getGenes,nodeSize = 5, annot = annFUN.org, mapping = "org.Dr.eg.db",ID = "symbol") 
-  
-  
-  resultFisher <- runTest(Odata, algorithm = "classic", statistic = "fisher")
-  allRes[[i]] <- GenTable(Odata, classicFisher = resultFisher)
-}
-
-
-
-
-
-significantResults = lapply(allRes,function(x) x[which(x$classicFisher<0.05),])
-
-ggplotPvals = vector("list",nclus)
-pdf("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/goTermAnalysis.pdf")
-for(i in 1:nclus){
-  a = cbind.data.frame(significantResults[[i]]$Term,significantResults[[i]]$classicFisher,stringsAsFactors=F)
-  colnames(a) = c("term","pVal")
-  a$pVal = -log10(as.numeric(a$pVal))
-  a$term = factor(a$term, levels = a$term)
-  ggplotPvals[[i]] = ggplot(a,aes(y=pVal,x=term,fill=pVal)) + geom_bar(stat = "identity")+ coord_flip() + ggtitle(paste0("Cluster ",i))
-  print(ggplotPvals[[i]])
-}
-
-dev.off()
-
-
-##### by manual inspection it looks like cluster 6 is zygotically expressed. Now looking at this cluster in deail and reclustering it
-
-
-
-
-zygoticTranscripts = TcConversion_clusters[[6]]
-
-# assay(zygoticTranscripts) = assay(zygoticTranscripts)-assay(zygoticTranscripts)[,1]
-# assay(zygoticTranscripts)[which(assay(zygoticTranscripts)<0)]<-0
-
-
-assay(zygoticTranscripts) = assay(zygoticTranscripts)+ 0.00001
-maxTC  = apply(assay(zygoticTranscripts),1,max)
-assay(zygoticTranscripts) = assay(zygoticTranscripts)/maxTC
-
-
-
-nclus=8
-
-cluster_tc = kmeans(assay(zygoticTranscripts),centers = nclus)
-diff_tcClusters = vector("list",nclus)
-
-plot_clusters =  vector("list",nclus)
-
-pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/ZGAgene_cluster.pdf")
-set.seed(123)
-k.max = 15
-data = assay(zygoticTranscripts)
-wss <- sapply(1:k.max, 
-              function(k){kmeans(data, k, nstart=50,iter.max = 1000 ,algorithm="MacQueen")$tot.withinss})
-
-
-plot(1:k.max, wss,
-     type="b", pch = 19, frame = FALSE, 
-     xlab="Number of clusters K",
-     ylab="Total within-clusters sum of squares")
-
-for(i in 1:nclus){
-  
-  diff_tcClusters[[i]] <- zygoticTranscripts[which(cluster_tc$cluster==i),]
-  plot_clusters[[i]] = melt(assay(diff_tcClusters[[i]]))
-  plot_clusters[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_tcClusters[[i]]))
-  plot_clusters[[i]]$category  = paste0("clus",i) 
-  q = ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=X1)) + geom_line(aes(col=X1)) + scale_x_discrete(limits=c(0,30,65,105,140,170)) + theme(legend.position="none")
-  q  = q+ ggtitle(paste0("clus",i," n=",nrow(assay(diff_tcClusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized TC conversion rate")
-  print(q)
-  p =  ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot() + ggtitle(paste0("clus",i," n=",nrow(assay(diff_tcClusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("normalized TC conversion rate")
-  p = p + scale_x_discrete(limits=c(0,30,65,105,140,170)) 
-  print(p)
-  
-}
-
-
-### trying out the elbow method : 
-
-
-dev.off()
-
-##### looking at the GO term analusis for this subset of ZGA genes 
-
-
-
-options(scipen = 999)
-
-geneList = cluster_tc$cluster
-names(geneList) = unique(rowRanges(zygoticTranscripts)$Name)
-allRes= vector("list",8)
-for(i in 1:nclus){
-  getGenes = function (allScore) 
-  {
-    return(unique(allScore == i))
-  }
-  
-  Odata <- new("topGOdata",ontology = "BP", allGenes = geneList, geneSel = getGenes,nodeSize = 5, annot = annFUN.org, mapping = "org.Dr.eg.db",ID = "symbol") 
-  
-  
-  resultFisher <- runTest(Odata, algorithm = "classic", statistic = "fisher")
-  allRes[[i]] <- GenTable(Odata, classicFisher = resultFisher)
-}
-
-
-
-
-
-significantResults = lapply(allRes,function(x) x[which(x$classicFisher<0.05),])
-
-ggplotPvals = vector("list",nclus)
-pdf("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/goTermAnalysis_ZGA.pdf")
-for(i in 1:nclus){
-  a = cbind.data.frame(significantResults[[i]]$Term,significantResults[[i]]$classicFisher,stringsAsFactors=F)
-  colnames(a) = c("term","pVal")
-  a$pVal = -log10(as.numeric(a$pVal))
-  a$term = factor(a$term, levels = a$term)
-  ggplotPvals[[i]] = ggplot(a,aes(y=pVal,x=term,fill=pVal)) + geom_bar(stat = "identity")+ coord_flip() + ggtitle(paste0("Cluster ",i))
-  print(ggplotPvals[[i]])
-}
-
-dev.off()
-
-
-
-
-########
-
-
-
-nclus = 8
-
-
-set.seed(123)
-clusterRPMs = kmeans(assay(data_counts_injection_tcConversions),centers = nclus,iter.max = 50)
-names_clus = paste0("clus",c(1:nclus))
-diff_clusters= vector("list",nclus)
-plot_clusters = vector("list",nclus)
-names(plot_clusters) = names_clus
-names(diff_clusters) = names_clus
-TcConversion_clusters = vector("list",nclus)
-plot_clusters_tc = vector("list",nclus)
-clusters_rpm = vector("list",nclus)
-rpmClusters_melt = vector("list",nclus)
-pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/clusteringTCreads.pdf")
-
-for(i in 1:nclus){
-  
-  clusters_rpm[[i]] = data_counts_injection_readsCPM[which(clusterRPMs$cluster==i),]
-  rpmClusters_melt[[i]]= melt(assay(clusters_rpm[[i]]))
-  rpmClusters_melt[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(clusters_rpm[[i]]))
-  rpmClusters_melt[[i]]$category  = paste0("clus",i) 
-  r =  ggplot(rpmClusters_melt[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot(outlier.shape = NA)  + ggtitle(paste0("clus",i," n=",nrow((rpmClusters_melt[[i]]))))+ theme_bw() + xlab("time in minutes") + ylab("normalized CPM")
-  r = r + scale_x_discrete(limits=c(0,30,65,105,140,170)) 
-  print(r)
-  
-  diff_clusters[[i]] <- data_counts_injection_tcConversions[which(clusterRPMs$cluster==i),]
-  plot_clusters[[i]] = melt(assay(diff_clusters[[i]]))
-  plot_clusters[[i]]$timepoint = rep(c(0,30,65,105,140,170),each=nrow(diff_clusters[[i]]))
-  plot_clusters[[i]]$category  = paste0("clus",i) 
-  q = ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=X1)) + geom_line(aes(col=X1)) + scale_x_discrete(limits=c(0,30,65,105,140,170)) + theme(legend.position="none")
-  q  = q+ ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("T>C conversion rate") + ylim(c(0,0.25))
-  print(q)
-  p =  ggplot(plot_clusters[[i]],aes(x=timepoint,y=value,group=timepoint)) +geom_boxplot(outlier.shape = NA) + ggtitle(paste0("clus",i," n=",nrow(assay(diff_clusters[[i]])))) + theme_bw() + xlab("time in minutes") + ylab("T>C conversion")
-  p = p + scale_x_discrete(limits=c(0,30,65,105,140,170)) + ylim(c(0,0.01))
-  print(p)
- 
-}
-dev.off()
-
-#### plottong the mean of the expression 
-
-
-
-### doind the go term analysis for this : 
-
-diff_clusters_numbers = unlist(lapply(diff_clusters,function(x) nrow(assay(x))))
-names(diff_clusters) = paste(names(diff_clusters),"(n=",diff_clusters_numbers,")")
-mean_clusters = lapply(diff_clusters,function(x) colMeans(assay(x)))
-mean_clusters_melt = melt(mean_clusters)
-mean_clusters_melt$time = c(0,30,65,105,140,170)
-
-meanClusters_rpm = lapply(clusters_rpm,function(x) colMeans(assay(x)))
-meanClusters_rpm_melt = melt(meanClusters_rpm)
-meanClusters_rpm_melt$time =  c(0,30,65,105,140,170)
-
-colMeans(assay(clusters_rpm[[1]]))
-pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/Clusters_TC_meanConversions.pdf")
-ggplot(mean_clusters_melt,aes(x=time,y=value,group=L1,col=L1))+geom_line(size=1) + xlab("time") + ylab("mean T>C conversions")
-q = ggplot(meanClusters_rpm_melt,aes(x=time,y=value,group=L1,col=L1))+geom_line(size=1) + xlab("time") + ylab("normalized mean conversions")
-print(q)
-dev.off()
-### I want to now do a GO analysis on the different clusters by RPM
-options(scipen = 999)
-
-geneList = clusterRPMs$cluster
-names(geneList) = rowRanges(data_counts_injection_readsCPM)$Name
-allRes= vector("list",nclus)
-for(i in 1:nclus){
-  getGenes = function (allScore) 
-  {
-    return(allScore == i)
-  }
-  
-  Odata <- new("topGOdata",ontology = "BP", allGenes = geneList, geneSel = getGenes,nodeSize = 5, annot = annFUN.org, mapping = "org.Dr.eg.db",ID = "symbol") 
-  
-  
-  resultFisher <- runTest(Odata, algorithm = "classic", statistic = "fisher")
-  allRes[[i]] <- GenTable(Odata, classicFisher = resultFisher)
-}
-
-
-
-
-
-significantResults = lapply(allRes,function(x) x[which(x$classicFisher<0.05),])
-
-ggplotPvals = vector("list",nclus)
-pdf("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/goTermAnalysis_clustersTCreads.pdf")
-for(i in 1:nclus){
-  a = cbind.data.frame(significantResults[[i]]$Term,significantResults[[i]]$classicFisher,stringsAsFactors=F)
-  colnames(a) = c("term","pVal")
-  a$pVal = -log10(as.numeric(a$pVal))
-  a$term = factor(a$term, levels = a$term)
-  ggplotPvals[[i]] = ggplot(a,aes(y=pVal,x=term,fill=pVal)) + geom_bar(stat = "identity")+ coord_flip() + ggtitle(paste0("Cluster ",i)) + xlab("-log10(pVal)")
-  print(ggplotPvals[[i]])
-}
-
-dev.off()
-
-
-### the GO term analysis reveals some interesting patterns of gene activation.
-
-
-
+      a = coordinates[which(coordinates$Dim.1 > 0.5 & coordinates$Dim.2< -0.05),]
+      b = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+      b_tc_melt = melt(b_tc)
+      ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() + xlab("time") +ylim(c(0,0.06))+ ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+      
+      d = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+      d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+      d_tc_melt = melt(d_tc)
+      ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
+      
+      dev.off()
+      
+      
+      
+      ### I want to compare maternal and zygotic transcripts in both the methods
+      
+        #### zygotic from k means clustering - zygotic_k - 5 clusters
+        #### maternal from k means clustering - maternal_k - 1 clusters
+        zygotic_k = diff_clusters_TC$clus5
+        maternal_k = diff_clusters_TC$clus1
+        
+        #### zyogotic from the PCA - zygotic_pca - quadrant 3 
+        a = coordinates[which(coordinates$Dim.1 < -0.5 & coordinates$Dim.2< -0.05),]
+        zyogotic_pca = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+        
+        #### maternal from the PCA - zygotic_pca - quadrant 1
+        
+        a = coordinates[which(coordinates$Dim.1 < -0.5 & coordinates$Dim.2> 0.1),]
+        maternal_pca = masterTable_5RPM[row.names(masterTable_5RPM) %in% row.names(a),]
+        
+        
+        ######## CREATING PROPER IDENTIFIERS FOR THE GENES . GENE NAME IS NOT UNIQUE. Using chr, start,end,gene name
+        zygotic_k$id = paste(zygotic_k$Chromosome,zygotic_k$Start,zygotic_k$End,zygotic_k$Name,sep="_")
+        maternal_k$id = paste(maternal_k$Chromosome,maternal_k$Start,maternal_k$End,maternal_k$Name,sep="_")
+        maternal_pca$id = paste(maternal_pca$Chromosome,maternal_pca$Start,maternal_pca$End,maternal_pca$Name,sep="_")
+        zyogotic_pca$id = paste(zyogotic_pca$Chromosome,zyogotic_pca$Start,zyogotic_pca$End,zyogotic_pca$Name,sep="_")
+        
+        
+        
+        
+        
+        intersect(maternal_pca$id,maternal_k$id)
+        intersect(maternal_pca$id,maternal_k$id)
+        
+        intersect(zyogotic_pca$id,zygotic_k$id)
+        
+        library(VennDiagram)
+        venn.diagram(x = list(maternal_pca =maternal_pca$id,maternal_k = maternal_k$id),"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/PCAclustering/intersect_maternalk_maternalPCA.png",imagetype = "png")
+        venn.diagram(x = list(zyogotic_pca =zyogotic_pca$id,zygotic_k = zygotic_k$id),"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/PCAclustering/intersect_zygotick_zygoticPCA.png",imagetype = "png")
+        
+        zygotic_presentInk  = setdiff(zygotic_k$id,zyogotic_pca$id)
+        zygotic_presentInpca  = setdiff(zyogotic_pca$id,zygotic_k$id)
+        
+       #### now looking at the patterns of T>C conversions in these non-overlapping transcripts
+        
+        
+        
+        zygotic_presentInk = zygotic_k[ zygotic_k$id %in% zygotic_presentInk,]
+        zygotic_presentInk_tc = zygotic_presentInk[,grep("_RPM_fraction",colnames(zygotic_presentInk))][,1:6]
+        zygotic_presentInk_tc_melt = melt(zygotic_presentInk_tc)
+        
+        zygotic_presentInpca = zyogotic_pca[ zyogotic_pca$id %in% zygotic_presentInpca,]
+        zygotic_presentInpca_tc = zygotic_presentInpca[,grep("_RPM_fraction",colnames(zygotic_presentInpca))][,1:6]
+        zygotic_presentInpca_tc_melt = melt(zygotic_presentInpca_tc)
+        
+        
+      pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/PCAclustering/PCA_kmeans_nonOverlappingZygotic.pdf")  
+       ggplot(zygotic_presentInk_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() + ggtitle(paste0("number of transcripts=",nrow(zygotic_presentInk_tc))) + ylab("Normalized RPM")
+       ggplot(zygotic_presentInpca_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() + ggtitle(paste0("number of transcripts=",nrow(zygotic_presentInpca_tc))) + ylab("Normalized RPM")
+      dev.off()
+      
+      
+      ###### same for the maternal transcripts
+      
+      maternal_presentInk  = setdiff(maternal_k$id,maternal_pca$id)
+      maternal_presentInpca  = setdiff(maternal_pca$id,maternal_k$id)
+      
+      
+      maternal_presentInk = maternal_k[ maternal_k$id %in% maternal_presentInk,]
+      maternal_presentInk_tc = maternal_presentInk[,grep("_RPM_fraction",colnames(maternal_presentInk))][,1:6]
+      maternal_presentInk_tc_melt = melt(maternal_presentInk_tc)
+      
+      maternal_presentInpca = maternal_pca[ maternal_pca$id %in% maternal_presentInpca,]
+      maternal_presentInpca_tc = maternal_presentInpca[,grep("_RPM_fraction",colnames(maternal_presentInpca))][,1:6]
+      maternal_presentInpca_tc_melt = melt(maternal_presentInpca_tc)
+      
+      pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/PCAclustering/PCA_kmeans_nonOverlappingMaternal.pdf")  
+      
+      ggplot(maternal_presentInk_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() + ggtitle(paste0("number of transcripts=",nrow(maternal_presentInk_tc))) + ylab("Normalized RPM") + ylim(c(0,1))
+      ggplot(maternal_presentInpca_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() + ggtitle(paste0("number of transcripts=",nrow(maternal_presentInpca_tc))) + ylab("Normalized RPM") + ylim(c(0,1))
+      
+      
+      dev.off()
+      
