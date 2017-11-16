@@ -6,14 +6,14 @@
   library(GenomicRanges)
   library(checkmate)
   library(dplyr)      
-  
+  library(factoextra)
   
   
   sampleInfoPath = read.delim("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/dr10_data/quantseq/sampleInfoIndex.txt",sep="\t",header = F,stringsAsFactors = F)
   sampleInfoPath = sampleInfoPath[11:24,]
   sampleInfoPath$countFile = paste0(sampleInfoPath$V1,"_adapterTrimmed_slamdunk_mapped_filtered_tcount.tsv")
-  # filePaths = file.path("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/annotation_including3pseq_ensemblCountingWindows_18102017//",sampleInfoPath$countFile)
-  filePaths = file.path("/Volumes//clustertmp/pooja/mapping_dr10_12052017/adapterTrimmed/allStages/includingEnsemblCountingWindows/TCreads_2/count/",sampleInfoPath$countFile)
+  filePaths = file.path("/Volumes//groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/annotation_including3pseq_ensemblCountingWindows_26102017_2TCreads//",sampleInfoPath$countFile)
+  #filePaths = file.path("/Volumes//clustertmp/pooja/mapping_dr10_12052017/adapterTrimmed/allStages/includingEnsemblCountingWindows/TCreads_2/count/",sampleInfoPath$countFile)
   
   data_counts = lapply(filePaths,function(x) read.table(x,stringsAsFactors = F,sep="\t",header = T))
   names(data_counts) = sampleInfoPath$V3
@@ -179,12 +179,13 @@
       fileName = paste0("transcripts_0tcConversions",thresholdRPM,".pdf")
       filePath = paste0(destination,fileName)
       pdf(filePath,height = 7,width=10)
-      ggplot(noTC_RPMs_melt,aes(x = variable,y=value,group=variable)) + geom_boxplot() +ggtitle(paste0("number of trasncripts=",nrow(noTC_RPMs)))
+      p = ggplot(noTC_RPMs_melt,aes(x = variable,y=value,group=variable)) + geom_boxplot() +ggtitle(paste0("number of trasncripts=",nrow(noTC_RPMs)))
+      print(p) 
       dev.off()
       
       
-      masterTable_5RPM_TCpresent = masterTable_5RPM[complete.cases(masterTable_5RPM),]
-      assertSetEqual(x = nrow(masterTable_5RPM),y=(nrow(masterTable_5RPM_TCpresent)+nrow(noTC))) ### quick check 
+      masterTable_5RPM_TCpresent = masterTable_5RPM
+      #assertSetEqual(x = nrow(masterTable_5RPM),y=(nrow(masterTable_5RPM_TCpresent)+nrow(noTC))) ### quick check 
       nclus=8
       
       set.seed(123)
@@ -276,10 +277,14 @@
       plot_clusters_RPMTotal_melt$type = "RPM"
       fileNames = paste0("boxplots_clusteringBasedOnRPM_",thresholdRPM,".pdf")
       plotPath = paste0(destination,fileNames)
+      
       pdf(plotPath)
-      ggplot(plot_clusters_TC_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylim(c(0,0.02)) + ylab("T>C reads")
-      ggplot(plot_clusters_RPM_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylab("normalized RPM")
-      ggplot(plot_clusters_RPMTotal_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylab("RPM")
+      p = ggplot(plot_clusters_TC_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylim(c(0,0.02)) + ylab("T>C reads")
+      print(p)
+      q = ggplot(plot_clusters_RPM_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylab("normalized RPM")
+      print(q)
+      r = ggplot(plot_clusters_RPMTotal_melt,aes(x=timepoint,y=value,group=timepoint)) + geom_boxplot() + facet_wrap(~category) + ylab("RPM")
+      print(r)
       
       dev.off()
       
@@ -296,12 +301,13 @@
       split_clusters_TC_melt = join(split_clusters_TC_melt,numberOfentriesPercluster)
       split_clusters_TC_melt$group = paste(split_clusters_TC_melt$L1,split_clusters_TC_melt$value1,sep="_")
       fileNames= paste0("meanRPMandTC_clusters",thresholdRPM,".pdf")
+      fileNames = paste0(destination,fileNames)
       pdf(fileNames)
       
       
       
-      ggplot(split_clusters_TC_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group),size=1 ) + ylab("Mean T>C conversion rate") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
-      
+      p = ggplot(split_clusters_TC_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group),size=1 ) + ylab("Mean T>C conversion rate") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
+      print(p)
       split_clusters = lapply(plot_clusters,function(x) split(x,x$variable,T))
       split_clusters_rpm = lapply(split_clusters,function(x) lapply(x,function(y) y[,3]))
       split_clusters_rpm = lapply(split_clusters_rpm,function(x) lapply(x,function(y) mean(y)))
@@ -312,8 +318,8 @@
       split_clusters_rpm_melt = join(split_clusters_rpm_melt,numberOfentriesPercluster)
       split_clusters_rpm_melt$group = paste(split_clusters_rpm_melt$L1,split_clusters_rpm_melt$value1,sep="_")
       
-      ggplot(split_clusters_rpm_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group) ,size=1) + ylab("Mean normalized RPM") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
-      
+      q = ggplot(split_clusters_rpm_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group) ,size=1) + ylab("Mean normalized RPM") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
+      print(q)
       
       #### plotting absolute RPM 
       
@@ -330,8 +336,8 @@
       split_clusters_RPM_melt$group = paste(split_clusters_RPM_melt$L1,split_clusters_RPM_melt$value1,sep="_")
       
       
-      ggplot(split_clusters_RPM_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group) ,size=1) + ylab("Mean normalized RPM") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
-      
+      r = ggplot(split_clusters_RPM_melt,aes(x=tome,y=value,group=group)) + geom_line(aes(col = group) ,size=1) + ylab("Mean normalized RPM") + xlab("time")+scale_x_continuous(breaks=c(2,2.5,3,3.75,4.3,4.8)) 
+      print(r)
       dev.off()
       
       allData = do.call(rbind,diff_clusters_TC)
@@ -344,19 +350,217 @@
     
   allData_1 = clusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 1)  
   allData_2 = clusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 2)
-  allData_3  = allDataclusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 3)
+  allData_3  = clusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 3)
   allData_4 = clusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 4)
   allData_5 = clusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 5)
-  allData_0 = clusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 0)  
-### based on the mESC dataset we can consider a RPM of 2 to be sure we have goos signal to noise ratio. 
+  allData_0 = clusterBasedOnthreshold(masteTable = masterTable,thresholdRPM = 0.00001)  
+
+  
+  
+  
+  ### based on the mESC dataset we can consider a RPM of 2 to be sure we have goos signal to noise ratio. 
+
+  
   
   ##### so I would use a ratio of rpm 2 to define high confidence clusters. 
-    
+
+  
+  ##### 
+  
+  
+  
+      
   
   allData_0_sub = allData_0[,c("id","cluster")]
+  colnames(allData_0_sub) = c("id","cluster_0RPMcutoff")
   allData_2_sub = allData_2[,c("id","cluster")]
+  colnames(allData_2_sub) = c("id","cluster_2RPMcutoff")
+  
+  #### manually checking what each cluster belongs to from the plots
+
+  
+  #### for cutoff 0
+  
+  
+  ## cluster 3 - MZ
+  ## cluster 1 - Z
+  ## cluster 2 - MZ
+  ## cluster 4 - MZ 
+  ## cluster 5 - M
+  ## cluster 6 - MZ
+  ## cluster 7 - MZ
+  ## cluster 8 - MZ
+  
+  
+  
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 1)] <- "Z"
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 2)] <- "MZ"
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 3)] <- "MZ"
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 4)] <- "MZ"
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 5)] <- "M"
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 6)] <- "MZ"
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 7)] <- "MZ"
+  allData_0_sub$cluster_0RPMcutoff[which(allData_0_sub$cluster_0RPMcutoff == 8)] <- "MZ"
+  
+  
+  
+  
+  
+  
+#### for 2 RPM cutoff....
+  ## cluster 2 - MZ
+  ## cluster 3 - MZ 
+  ## cluster 4 - M
+  ## cluster 1 - Z
+  ## cluster 5 - MZ
+  ## cluster 6 - M
+  ## cluster 7 - MZ
+  ## cluster 8 - MZ
+  
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 2)] <- "MZ"
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 3)] <- "MZ"
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 4)] <- "M"
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 1)] <- "Z"
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 5)] <- "MZ"
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 6)] <- "M"
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 7)] <- "MZ"
+  allData_2_sub$cluster_2RPMcutoff[ which(allData_2_sub$cluster_2RPMcutoff== 8)] <- "MZ"
   
   ####
+  masterTable = join(masterTable , allData_0_sub)
+  masterTable = join(masterTable , allData_2_sub)
+  masterTable_identical  = masterTable %>% filter(cluster_0RPMcutoff == cluster_2RPMcutoff)  %>% mutate(identity = "identical")
+  masterTable_nonIdentical  = masterTable %>% filter(cluster_0RPMcutoff != cluster_2RPMcutoff)  %>% mutate(identity = "non-identical")
+  masterTable_incomplete = masterTable[!complete.cases(masterTable),]
+  masterTable_incomplete$identity = "NA"
+  assertSetEqual(x = nrow(masterTable),y = (nrow(masterTable_nonIdentical) + nrow(masterTable_identical) + nrow(masterTable_incomplete) ))
+  
+  masterTable = rbind(masterTable_identical, masterTable_nonIdentical, masterTable_incomplete)
+  write.table(masterTable,"/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/importantDataframes/clusteringTCreads/clustering_multiLevel.txt",sep="\t",quote = F,row.names = F)
+  
+  
+  ##### now I also want to cluster the T>C reads to see if all the zygotic trsnascripts contain T>C conversios...
+  
+  onlyZygoticTranscripts = masterTable %>% filter(cluster_0RPMcutoff == "Z")
+  zygoticTranscriptsWithoutTCreads = onlyZygoticTranscripts[ which(onlyZygoticTranscripts$max_tc == 0),]
+  zygoticTranscriptsWithTCreads = onlyZygoticTranscripts[ which(onlyZygoticTranscripts$max_tc != 0),]
+  #### now I can also cluster using PCA... 
+  
+  
+  
+  masterTable_5RPM_a = masterTable[,grep("RPM",colnames(masterTable))][,c(1:6)]
+  colnames(masterTable_5RPM_a) = c("2","2.5","3","3.75","4.3","4.8")
+  #masterTable_5RPM_a = masterTable_5RPM_a[1:50,]
+  res.pca <- prcomp(masterTable_5RPM_a, scale = TRUE)
+  
+  fviz_eig(res.pca)
+  fviz_pca_ind(res.pca,
+               col.ind = "cos2", # Color by the quality of representation
+               gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),geom = c("point"),
+               repel = TRUE, xlim  = (c(-2,10)),ylim=c(-4,1)   # Avoid text overlapping,
+  )
+  
+  fviz_pca_ind(res.pca,
+               geom = c("point"),
+               repel = TRUE, xlim  = (c(-2,10)),ylim=c(-4,1)   # Avoid text overlapping,
+  )
+  
+  
+  fviz_pca_biplot(res.pca, repel = TRUE,
+                  col.var = "#2E9FDF", # Variables color
+                  col.ind = "#696969",
+                  geom = c("point")
+  )
+  
+  eig.val <- get_eigenvalue(res.pca)
+  eig.val
+  
+  res.var <- get_pca_var(res.pca)
+  res.var$coord          # Coordinates
+  res.var$contrib        # Contributions to the PCs
+  res.var$cos2  
+  
+  
+  res.ind <- get_pca_ind(res.pca)
+  res.ind$coord          # Coordinates
+  res.ind$contrib        # Contributions to the PCs
+  res.ind$cos2           # Quality of representation 
+  
+  coordinates = as.data.frame(res.ind$coord)
+  
+  pdf("/Volumes/groups/ameres/Pooja/Projects/zebrafishAnnotation/zebrafish_analysis/plots/PCAclustering/plottingQuadrants_PCA.pdf")
+  ##### get the T>C conversions based on the coordinates .. 
+  
+  ### quadrant 1
+  
+  a = coordinates[which(coordinates$Dim.1 < -0.5 & coordinates$Dim.2> 0.1),]
+  b = masterTable[row.names(masterTable) %in% row.names(a),]
+  b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+  b_tc_melt = melt(b_tc)
+  ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() +ylim(c(0,0.06))+ xlab("time") + ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+  
+  d = masterTable[row.names(masterTable) %in% row.names(a),]
+  d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+  d_tc_melt = melt(d_tc)
+  ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
+  
+  
+  ### quadrant 2
+  a = coordinates[which(coordinates$Dim.1 > 0.5 & coordinates$Dim.2> 0.05),]
+  b = masterTable[row.names(masterTable) %in% row.names(a),]
+  b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+  b_tc_melt = melt(b_tc)
+  ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() +ylim(c(0,0.06)) + xlab("time") + ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+  
+  d = masterTable[row.names(masterTable) %in% row.names(a),]
+  d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+  d_tc_melt = melt(d_tc)
+  ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
+  
+  
+  
+  
+  ### quandrant 3
+  
+  
+  a = coordinates[which(coordinates$Dim.1 < -0.5 & coordinates$Dim.2< -0.05),]
+  b = masterTable[row.names(masterTable) %in% row.names(a),]
+  
+  
+  
+  ### plott the T>C conversions in this cluster now
+  b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+  b_tc_melt = melt(b_tc)
+  ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() +ylim(c(0,0.06))+ xlab("time") + ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+  
+  d = masterTable[row.names(masterTable) %in% row.names(a),]
+  
+  d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+  d_tc_melt = melt(d_tc)
+  ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
+  
+  
+  
+  
+  
+  
+  
+  
+  ### quadrant 4 
+  
+  a = coordinates[which(coordinates$Dim.1 > 0.25 & coordinates$Dim.2< -0.05),]
+  b = masterTable[row.names(masterTable) %in% row.names(a),]
+  b_tc = b[,grep("_tc",colnames(b))][,c(1:6)]
+  b_tc_melt = melt(b_tc)
+  ggplot(b_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot() + xlab("time") +ylim(c(0,0.06))+ ylab("T>C conversion rate") + ggtitle(paste0("number of transcripts=",nrow(a)))
+  
+  d = masterTable[row.names(masterTable) %in% row.names(a),]
+  d_tc = d[,grep("_RPM",colnames(d))][,c(1:6)]
+  d_tc_melt = melt(d_tc)
+  ggplot(d_tc_melt,aes(x=variable,y=value,group=variable)) + geom_boxplot()+ xlab("time") + ylab("RPM") + ggtitle(paste0("number of transcripts=",nrow(d)))
+  
+  dev.off()
+  
   
   
   
